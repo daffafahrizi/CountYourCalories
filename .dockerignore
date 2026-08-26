@@ -1,0 +1,32 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Logs & Temporary files
+*.log
+*.tmp
+*.jpg
+*.jpeg
+*.png
+
+# IDE & Editor
+.vscode/
+.idea/
+*.md
