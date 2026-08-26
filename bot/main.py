@@ -32,6 +32,7 @@ from bot.handlers.adjust import (
     handle_hapus,
     handle_help,
     handle_settarget,
+    handle_recalc_callback,
 )
 
 # Load .env
@@ -88,6 +89,7 @@ def main() -> None:
     app.add_handler(CommandHandler("undo", handle_undo))
     app.add_handler(CommandHandler("hapus", handle_hapus))
     app.add_handler(CommandHandler("settarget", handle_settarget))
+    app.add_handler(CallbackQueryHandler(handle_recalc_callback, pattern=r"^recalc:"))
     app.add_handler(CommandHandler(["help", "command", "commands", "menu"], handle_help))
 
     # ── Message handlers ──────────────────────────────────────────────────────

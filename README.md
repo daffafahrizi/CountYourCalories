@@ -17,6 +17,7 @@ Asisten nutrisi cerdas berbasis Telegram yang mencatat kalori dan makronutrisi h
 - 📸 **Analisis Foto Makanan Otomatis:** Cukup kirimkan foto makananmu, AI akan mengidentifikasi seluruh komponen makanan, mengestimasi porsi, kalori, serta makronutrisi (protein, karbohidrat, lemak).
 - 🌐 **Dukungan Dwibahasa (Bilingual i18n):** Mendukung penuh **Bahasa Indonesia** 🇮🇩 dan **English** 🇬🇧 dengan deteksi otomatis dan menu pergantian bahasa via `/lang`.
 - ✍️ **Pencatatan Teks Manual:** Fitur `/catat <makanan>` untuk mencatat makanan ketika tidak memiliki foto.
+- 🧮 **Kalkulator Gizi Ilmiah (Mifflin-St Jeor):** Menghitung BMR, TDEE, target kalori (Defisit/Maintenance/Surplus), dan protein optimal (1.8g/kg BB - BJSM 2018) secara otomatis saat onboarding `/start`.
 - 📊 **Ringkasan Harian Visual:** Command `/summary` atau `/today` menyajikan laporan progres harian lengkap dengan indikator progress bar dan sisa kuota nutrisi.
 - ↩️ **Koreksi Cepat & NLP:** Fitur `/undo`, `/hapus <nama>`, `/settarget`, serta perintah bahasa natural (misal: *"hapus ayam bakar tadi"*).
 - 🐳 **Docker Ready:** Siap dijalankan di server/VPS 24/7 dengan Docker Compose & auto-restart.
@@ -126,7 +127,7 @@ python -m bot.main
 | `/catat` | Mencatat makanan manual via teks | `/catat 1 porsi nasi padang ayam rendang` |
 | `/undo` | Menghapus makanan terakhir yang dicatat hari ini | `/undo` |
 | `/hapus` | Menghapus makanan berdasarkan kata kunci nama | `/hapus nasi goreng` |
-| `/settarget` | Memperbarui target kalori dan protein harian | `/settarget 2200 160` |
+| `/settarget` | Mengubah target (Shortcut angka atau Wizard kalkulator ilmiah) | `/settarget` atau `/settarget 2200 160` |
 | `/help` | Menampilkan panduan bantuan lengkap | `/help` |
 | *(Kirim Foto)* | Bot otomatis menganalisis dan mencatat foto | *(Kirim foto makanan langsung)* |
 
@@ -169,6 +170,7 @@ CountYourCalories/
 
 - [x] **Core AI Vision Logging**: Analisis foto makanan otomatis via Gemini Flash.
 - [x] **Bilingual Support (i18n)**: Dukungan penuh Bahasa Indonesia 🇮🇩 & English 🇬🇧.
+- [x] **Scientific Nutrition Auto-Calculator**: Otomatis hitung BMR, TDEE, & target gizi via formula Mifflin-St Jeor & BJSM 2018.
 - [x] **Multi-Provider Fallback Switcher**: Otomatis switch ke OpenRouter / OpenAI jika primary provider mengalami 503/429.
 - [x] **Dockerization**: Image `python:3.11-slim` dan orkestrasi `docker-compose.yml`.
 - [ ] **🥗 RAG Food Nutrition Reference Database (Supabase)**:

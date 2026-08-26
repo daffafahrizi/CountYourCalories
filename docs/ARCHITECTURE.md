@@ -172,12 +172,29 @@ sequenceDiagram
     Start->>User: Tanya Tinggi Badan (cm)
     
     User->>Start: Kirim Tinggi Badan
-    Start->>User: Tanya Target Kalori (atau /skip)
+    Start->>User: Pilihan Target Mode: [ 🎯 Hitung Otomatis ] [ ✍️ Input Manual ]
     
-    User->>Start: Kirim Target Kalori
-    Start->>User: Tanya Target Protein (rekomendasi otomatis 1.6–2.2g/kg)
+    alt Mode: Hitung Otomatis (Rekomendasi Ilmiah)
+        User->>Start: Klik [ 🎯 Hitung Otomatis ] (onboard_mode:auto)
+        Start->>User: Tanya Jenis Kelamin [ 👨 Laki-laki ] [ 👩 Perempuan ]
+        User->>Start: Pilih Gender (onboard_gender:male/female)
+        Start->>User: Tanya Usia
+        User->>Start: Kirim Usia (tahun)
+        Start->>User: Tanya Level Aktivitas Fisik (Sedentary / Light / Moderate / Heavy)
+        User->>Start: Pilih Aktivitas (onboard_act:1.2-1.725)
+        Start->>User: Tanya Tujuan Fitness (Defisit -400 kkal / Maintenance / Surplus +300 kkal)
+        User->>Start: Pilih Tujuan (onboard_goal:deficit/maintain/surplus)
+        Start->>Start: Hitung BMR (Mifflin-St Jeor) & TDEE & Target Protein (BJSM 2018 @ 1.8g/kg)
+        Start->>User: Tampilkan Ringkasan Hasil Analisis + [ ✅ Gunakan Target ] [ ✏️ Ubah Manual ]
+        User->>Start: Klik [ ✅ Gunakan Target ] (onboard_confirm:yes)
+    else Mode: Input Manual
+        User->>Start: Klik [ ✍️ Input Manual ] (onboard_mode:manual)
+        Start->>User: Tanya Target Kalori (atau /skip)
+        User->>Start: Kirim Target Kalori
+        Start->>User: Tanya Target Protein (atau /skip)
+        User->>Start: Kirim Target Protein
+    end
     
-    User->>Start: Kirim Target Protein
     Start->>DB: create_user(telegram_id, name, weight, height, target_cal, target_prot, language)
     DB-->>Start: User Record Created
     Start->>User: 🎉 Profil tersimpan & Petunjuk penggunaan bot
@@ -353,12 +370,12 @@ docker compose down
 | `/summary` / `/today` | `summary.py` | Menampilkan laporan kalori, protein, karbohidrat, lemak, dan visual progress bar hari ini. |
 | `/catat <makanan>` | `text.py` | Mencatat makanan secara manual via teks. |
 | `/undo` | `adjust.py` | Menghapus entri makanan terakhir yang dicatat hari ini. |
-| `/hapus <nama>` | `adjust.py` | Menghapus semua entri makanan hari ini yang cocok dengan nama tertentu. |
-| `/settarget <kal> <prot>` | `adjust.py` | Mengubah target kalori dan protein harian pengguna. |
+| `/settarget [kal] [prot]` | `adjust.py` | Mode ganda: Shortcut instan `/settarget 2000 150` ATAU Wizard kalkulator ilmiah otomatis jika diketik `/settarget` saja. |
 | `/help` | `adjust.py` | Menampilkan panduan dan daftar seluruh perintah yang tersedia. |
 | *(Foto Makanan)* | `photo.py` | Menganalisis foto makanan secara otomatis menggunakan AI multimodal. |
 | *(Pesan Teks Bebas)* | `text.py` | Menginterpretasikan perintah penyesuaian natural language (NLP). |
-| `onboard_lang:*` | `start.py` | Callback query saat user memilih bahasa di alur onboarding. |
+| `onboard_*` | `start.py` | Callback query pada alur onboarding & kalkulator /start. |
+| `recalc:*` | `adjust.py` | Callback query pada wizard hitung ulang target ilmiah /settarget. |
 | `set_lang:*` | `language.py` | Callback query saat user mengganti bahasa via menu `/lang`. |
 
 ---

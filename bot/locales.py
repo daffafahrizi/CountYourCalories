@@ -63,6 +63,47 @@ MESSAGES: dict[str, dict[str, str]] = {
             "  /lang → Ganti bahasa (Language)\n"
             "  /help → Panduan lengkap"
         ),
+        "choose_target_mode": (
+            "🎯 *Bagaimana kamu ingin menentukan target kalori & proteinmu?*\n\n"
+            "• *Hitung Otomatis:* Dihitung berdasarkan rumus medis _Mifflin-St Jeor_ & konsensus gizi internasional.\n"
+            "• *Input Manual:* Masukkan angka targetmu sendiri secara langsung."
+        ),
+        "btn_auto_calc": "🎯 Hitung Otomatis (Rekomendasi)",
+        "btn_manual_input": "✍️ Input Manual Sendiri",
+        "ask_gender": (
+            "👤 *Pilih jenis kelamin biologismu:*\n\n"
+            "_(Dibutuhkan untuk menghitung laju metabolisme basal BMR secara akurat)_"
+        ),
+        "btn_male": "👨 Laki-laki",
+        "btn_female": "👩 Perempuan",
+        "ask_age": "🎂 *Berapa usiamu saat ini?* _(contoh: 24)_",
+        "invalid_age": "⚠️ Masukkan angka usia yang valid antara 10–100 tahun, contoh: *24*",
+        "ask_activity": (
+            "🏃 *Seberapa sering kamu beraktivitas fisik / olahraga dalam seminggu?*\n\n"
+            "_(Berdasarkan standar Physical Activity Level WHO)_"
+        ),
+        "btn_act_sedentary": "🛋️ Jarang Olahraga (Duduk/Rebahan)",
+        "btn_act_light": "🚶 Ringan (Olahraga 1–3x/minggu)",
+        "btn_act_moderate": "🏋️ Sedang/Aktif (Olahraga 3–5x/minggu)",
+        "btn_act_heavy": "⚡ Sangat Aktif (Olahraga 6–7x / Pekerja Fisik)",
+        "ask_goal": "🎯 *Apa tujuan kebugaran utama kamu saat ini?*",
+        "btn_goal_deficit": "📉 Turunkan Lemak / Defisit (-400 kkal)",
+        "btn_goal_maintain": "⚖️ Jaga Berat Badan (Maintenance)",
+        "btn_goal_surplus": "📈 Tambah Massa Otot / Surplus (+300 kkal)",
+        "goal_desc_deficit": "Defisit 400 kkal untuk fat loss aman",
+        "goal_desc_maintain": "Keseimbangan energi harian",
+        "goal_desc_surplus": "Surplus 300 kkal untuk pembentukan otot",
+        "calc_result": (
+            "🎉 *Hasil Analisis Gizi Ilmiahmu:*\n\n"
+            "🔥 *BMR (Metabolisme Dasar):* `{bmr} kkal`\n"
+            "⚡ *TDEE (Kebutuhan Harian Total):* `{tdee} kkal`\n\n"
+            "🎯 *Rekomendasi Target Harian:*\n"
+            "  🔥 *Kalori:* *{target_cal} kkal/hari* _({goal_desc})_\n"
+            "  💪 *Protein:* *{target_prot}g/hari* _(1.8g/kg BB - BJSM 2018)_\n\n"
+            "Apakah kamu ingin menggunakan target ini?"
+        ),
+        "btn_confirm_calc": "✅ Gunakan Target Ini",
+        "btn_edit_manual": "✏️ Sesuaikan Manual",
         "onboarding_cancelled": "Onboarding dibatalkan. Ketik /start untuk memulai lagi.",
         "not_registered": "⚠️ Kamu belum terdaftar! Ketik /start untuk setup profil dulu ya.",
 
@@ -112,6 +153,35 @@ MESSAGES: dict[str, dict[str, str]] = {
             "🔥 Kalori: {total_cal}/{target_cal} kkal\n"
             "💪 Protein: {total_prot}g/{target_prot}g"
         ),
+        "settarget_menu": (
+            "🎯 *Pengaturan Target Gizi Harian*\n\n"
+            "👤 *Data Profil Tubuhmu:*\n"
+            "• Berat: *{weight} kg* | Tinggi: *{height} cm*\n\n"
+            "📋 *Target Saat Ini:*\n"
+            "• 🔥 Kalori: *{current_cal} kkal/hari*\n"
+            "• 💪 Protein: *{current_prot}g/hari*\n\n"
+            "_Pilih metode pembaruan target:_"
+        ),
+        "btn_recalc_start": "🧮 Hitung Ulang Otomatis (Ilmiah)",
+        "btn_recalc_manual": "✍️ Input Manual Sendiri",
+        "recalc_manual_guide": (
+            "✍️ *Pengaturan Target Manual*\n\n"
+            "Ketik perintah `/settarget` diikuti target kalori dan protein yang kamu inginkan:\n\n"
+            "📌 *Format:* `/settarget <kalori> <protein>`\n\n"
+            "💡 *Contoh:*\n"
+            "• `/settarget 2000 150` _(Target 2000 kkal & 150g protein)_\n"
+            "• `/settarget 1800 130` _(Target 1800 kkal & 130g protein)_"
+        ),
+        "btn_back": "↩️ Kembali ke Menu",
+        "recalc_age_prompt": "🎂 *Pilih kelompok usiamu saat ini:*",
+        "btn_age_group_1": "👶 < 20 tahun",
+        "btn_age_group_2": "🧑 20–29 tahun",
+        "btn_age_group_3": "🧔 30–39 tahun",
+        "btn_age_group_4": "👨 40–49 tahun",
+        "btn_age_group_5": "👴 50+ tahun",
+        "btn_recalc_apply": "✅ Terapkan Target Baru",
+        "btn_recalc_cancel": "❌ Batal",
+        "recalc_cancelled": "Pembaruan target dibatalkan.",
         "settarget_usage": (
             "ℹ️ Penggunaan: `/settarget <kalori> <protein>`\n"
             "Contoh: `/settarget 2000 150`"
@@ -221,6 +291,47 @@ MESSAGES: dict[str, dict[str, str]] = {
             "  /lang → Change language\n"
             "  /help → View help guide"
         ),
+        "choose_target_mode": (
+            "🎯 *How would you like to set your calorie & protein targets?*\n\n"
+            "• *Auto Calculate:* Scientifically calculated using the _Mifflin-St Jeor_ formula & international nutrition standards.\n"
+            "• *Manual Input:* Enter your own custom targets directly."
+        ),
+        "btn_auto_calc": "🎯 Auto Calculate (Recommended)",
+        "btn_manual_input": "✍️ Enter Manually",
+        "ask_gender": (
+            "👤 *Select your biological sex:*\n\n"
+            "_(Required to accurately compute Basal Metabolic Rate BMR)_"
+        ),
+        "btn_male": "👨 Male",
+        "btn_female": "👩 Female",
+        "ask_age": "🎂 *How old are you?* _(e.g. 24)_",
+        "invalid_age": "⚠️ Please enter a valid age between 10–100, e.g. *24*",
+        "ask_activity": (
+            "🏃 *How often do you exercise / engage in physical activity weekly?*\n\n"
+            "_(Based on WHO Physical Activity Level standards)_"
+        ),
+        "btn_act_sedentary": "🛋️ Sedentary (Little/no exercise, desk job)",
+        "btn_act_light": "🚶 Lightly Active (Exercise 1–3x/week)",
+        "btn_act_moderate": "🏋️ Moderately Active (Exercise 3–5x/week)",
+        "btn_act_heavy": "⚡ Very Active (Hard exercise 6–7x/week or physical job)",
+        "ask_goal": "🎯 *What is your primary fitness goal?*",
+        "btn_goal_deficit": "📉 Fat Loss / Deficit (-400 kcal)",
+        "btn_goal_maintain": "⚖️ Maintain Weight (Maintenance)",
+        "btn_goal_surplus": "📈 Build Muscle / Surplus (+300 kcal)",
+        "goal_desc_deficit": "400 kcal deficit for sustainable fat loss",
+        "goal_desc_maintain": "Daily energy balance",
+        "goal_desc_surplus": "300 kcal surplus for muscle hypertrophy",
+        "calc_result": (
+            "🎉 *Your Scientific Nutrition Profile:*\n\n"
+            "🔥 *BMR (Basal Metabolic Rate):* `{bmr} kcal`\n"
+            "⚡ *TDEE (Total Daily Energy):* `{tdee} kcal`\n\n"
+            "🎯 *Recommended Daily Targets:*\n"
+            "  🔥 *Calories:* *{target_cal} kcal/day* _({goal_desc})_\n"
+            "  💪 *Protein:* *{target_prot}g/day* _(1.8g/kg bodyweight - BJSM 2018)_\n\n"
+            "Would you like to use these targets?"
+        ),
+        "btn_confirm_calc": "✅ Use These Targets",
+        "btn_edit_manual": "✏️ Customize Manually",
         "onboarding_cancelled": "Onboarding cancelled. Type /start to begin again.",
         "not_registered": "⚠️ You're not registered yet! Type /start to set up your profile.",
 
@@ -270,6 +381,35 @@ MESSAGES: dict[str, dict[str, str]] = {
             "🔥 Calories: {total_cal}/{target_cal} kcal\n"
             "💪 Protein: {total_prot}g/{target_prot}g"
         ),
+        "settarget_menu": (
+            "🎯 *Daily Nutrition Target Settings*\n\n"
+            "👤 *Your Body Profile:*\n"
+            "• Weight: *{weight} kg* | Height: *{height} cm*\n\n"
+            "📋 *Current Targets:*\n"
+            "• 🔥 Calories: *{current_cal} kcal/day*\n"
+            "• 💪 Protein: *{current_prot}g/day*\n\n"
+            "_Choose how you would like to update your targets:_"
+        ),
+        "btn_recalc_start": "🧮 Auto Recalculate (Scientific)",
+        "btn_recalc_manual": "✍️ Enter Manually",
+        "recalc_manual_guide": (
+            "✍️ *Manual Target Settings*\n\n"
+            "Type the `/settarget` command followed by your desired calories and protein targets:\n\n"
+            "📌 *Format:* `/settarget <calories> <protein>`\n\n"
+            "💡 *Examples:*\n"
+            "• `/settarget 2000 150` _(Target 2000 kcal & 150g protein)_\n"
+            "• `/settarget 1800 130` _(Target 1800 kcal & 130g protein)_"
+        ),
+        "btn_back": "↩️ Back to Menu",
+        "recalc_age_prompt": "🎂 *Select your current age group:*",
+        "btn_age_group_1": "👶 < 20 yrs",
+        "btn_age_group_2": "🧑 20–29 yrs",
+        "btn_age_group_3": "🧔 30–39 yrs",
+        "btn_age_group_4": "👨 40–49 yrs",
+        "btn_age_group_5": "👴 50+ yrs",
+        "btn_recalc_apply": "✅ Apply New Targets",
+        "btn_recalc_cancel": "❌ Cancel",
+        "recalc_cancelled": "Target update cancelled.",
         "settarget_usage": (
             "ℹ️ Usage: `/settarget <calories> <protein>`\n"
             "Example: `/settarget 2000 150`"
