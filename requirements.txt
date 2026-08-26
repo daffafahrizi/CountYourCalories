@@ -1,0 +1,17 @@
+# Telegram Bot framework
+python-telegram-bot==21.6
+
+# Google Antigravity SDK (agent framework)
+google-antigravity
+
+# Supabase client
+supabase==2.9.0
+
+# Environment variable management
+python-dotenv==1.0.1
+
+# Pydantic for data validation
+pydantic==2.8.0
+
+# Async HTTP (dipakai python-telegram-bot)
+httpx==0.27.0
