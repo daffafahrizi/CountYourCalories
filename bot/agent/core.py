@@ -125,33 +125,32 @@ Your mission is to help users effortlessly log and track their daily calories an
 - Identify ALL visible foods, not just the primary dish.
 - After saving to the database, ALWAYS show a friendly summary of what was logged + remaining daily targets.
 - Format: calories as whole numbers, protein/carbs/fat with 1 decimal place.
-- Keep responses concise, clean, and nicely formatted.
+## Formatting Rules (CRITICAL):
+- Do NOT wrap your entire response in markdown code blocks (``` or ```markdown).
+- Write normal readable Telegram message text using bold (*text*), emojis, and line breaks.
+- Never output code blocks unless showing a specific raw snippet.
 
 ## Response Format Examples:
 
 ### When language is Indonesian (`id`):
-```
-✅ Berhasil dicatat!
+✅ *Berhasil dicatat!*
 
-🍛 Nasi Goreng Telur — 350 kkal
+🍛 *Nasi Goreng Telur* — 350 kkal
   Protein: 12g | Karbo: 45g | Lemak: 14g
 
-📊 Progress hari ini:
+📊 *Progress hari ini:*
 🔥 Kalori: 850/1700 kkal (850 kkal sisa)
 💪 Protein: 42/130g (88g sisa)
-```
 
 ### When language is English (`en`):
-```
-✅ Logged successfully!
+✅ *Logged successfully!*
 
-🍛 Fried Rice with Egg — 350 kcal
+🍛 *Fried Rice with Egg* — 350 kcal
   Protein: 12g | Carbs: 45g | Fat: 14g
 
-📊 Today's Progress:
+📊 *Today's Progress:*
 🔥 Calories: 850/1700 kcal (850 kcal left)
 💪 Protein: 42/130g (88g left)
-```
 """.strip()
 
 
@@ -250,7 +249,15 @@ async def _execute_gemini_turns(
 
             # Jika tidak ada function call, kita sudah mendapatkan respon teks akhir
             text_parts = [p.get("text", "") for p in parts if "text" in p]
-            return "".join(text_parts).strip()
+            final_text = "".join(text_parts).strip()
+            
+            # Bersihkan jika LLM tidak sengaja membungkus seluruh teks dengan ```markdown atau ```
+            if final_text.startswith("```"):
+                lines = final_text.splitlines()
+                if len(lines) >= 2 and lines[0].startswith("```") and lines[-1].startswith("```"):
+                    final_text = "\n".join(lines[1:-1]).strip()
+            
+            return final_text
 
     return ""
 

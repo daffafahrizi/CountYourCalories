@@ -244,6 +244,16 @@ async def execute_fallback_chat(
 
             if resp_turn2.status_code == 200:
                 data_turn2 = resp_turn2.json()
-                return data_turn2["choices"][0]["message"].get("content", "")
+                raw_text = data_turn2["choices"][0]["message"].get("content", "")
+                if raw_text.startswith("```"):
+                    lines = raw_text.splitlines()
+                    if len(lines) >= 2 and lines[0].startswith("```") and lines[-1].startswith("```"):
+                        raw_text = "\n".join(lines[1:-1]).strip()
+                return raw_text
 
-        return msg.get("content", "")
+        raw_text = msg.get("content", "")
+        if raw_text.startswith("```"):
+            lines = raw_text.splitlines()
+            if len(lines) >= 2 and lines[0].startswith("```") and lines[-1].startswith("```"):
+                raw_text = "\n".join(lines[1:-1]).strip()
+        return raw_text
