@@ -26,7 +26,11 @@ from bot.handlers.language import (
 )
 from bot.handlers.photo import handle_photo
 from bot.handlers.text import handle_catat, handle_text
-from bot.handlers.summary import handle_summary
+from bot.handlers.summary import (
+    handle_summary,
+    handle_summary_date_callback,
+    handle_weekly,
+)
 from bot.handlers.adjust import (
     handle_undo,
     handle_hapus,
@@ -53,6 +57,7 @@ async def post_init(application: Application) -> None:
         BotCommand("catat", "Catat makanan / Log food (cth: /catat ayam bakar)"),
         BotCommand("summary", "Ringkasan hari ini / Today's nutrition summary"),
         BotCommand("today", "Alias untuk /summary"),
+        BotCommand("weekly", "Laporan 7 hari & AI Coach / Weekly report & insights"),
         BotCommand("undo", "Hapus entry terakhir / Delete last logged entry"),
         BotCommand("hapus", "Hapus entry by nama / Delete entry by name"),
         BotCommand("settarget", "Ubah target / Update targets (cth: /settarget 2000 150)"),
@@ -85,11 +90,13 @@ def main() -> None:
 
     # ── Commands ──────────────────────────────────────────────────────────────
     app.add_handler(CommandHandler(["summary", "today"], handle_summary))
+    app.add_handler(CommandHandler(["weekly", "mingguan"], handle_weekly))
     app.add_handler(CommandHandler("catat", handle_catat))
     app.add_handler(CommandHandler("undo", handle_undo))
     app.add_handler(CommandHandler("hapus", handle_hapus))
     app.add_handler(CommandHandler("settarget", handle_settarget))
     app.add_handler(CallbackQueryHandler(handle_recalc_callback, pattern=r"^recalc:"))
+    app.add_handler(CallbackQueryHandler(handle_summary_date_callback, pattern=r"^(summary_date:|summary_open_weekly)"))
     app.add_handler(CommandHandler(["help", "command", "commands", "menu"], handle_help))
 
     # ── Message handlers ──────────────────────────────────────────────────────

@@ -113,8 +113,10 @@ MESSAGES: dict[str, dict[str, str]] = {
 
         # ── Summary /summary ──
         "summary_title": "📊 *Ringkasan hari ini, {name}!*",
+        "summary_date_title": "📊 *Ringkasan Nutrisi ({date_str}), {name}!*",
         "summary_logged_meals": "🍽️ *Makanan yang tercatat:*",
         "summary_no_meals": "  _Belum ada makanan yang tercatat hari ini_",
+        "summary_no_meals_date": "  _Tidak ada catatan makanan pada tanggal ini_",
         "summary_nutrition_progress": "📈 *Progress nutrisi:*",
         "summary_cal_line": "🔥 Kalori: `{bar}` {total}/{target} kkal _{sisa}_",
         "summary_prot_line": "💪 Protein: `{bar}` {total}g/{target}g _{sisa}_",
@@ -128,6 +130,23 @@ MESSAGES: dict[str, dict[str, str]] = {
         "status_protein_75": "💪 Hampir sampai target proteinmu, terus semangat!",
         "status_protein_50": "📈 Sudah setengah jalan, pertahankan!",
         "status_protein_low": "🥗 Jangan lupa tingkatkan asupan proteinmu ya!",
+        "btn_prev_day": "◀️ {date_label}",
+        "btn_today": "🔄 Hari Ini",
+        "btn_next_day": "{date_label} ▶️",
+        "day_today": "Hari Ini",
+        "day_yesterday": "Kemarin",
+
+        # ── Weekly Report /weekly ──
+        "weekly_title": "📊 *Laporan Nutrisi 7 Hari ({period}), {name}!*",
+        "weekly_averages_title": "📈 *Rata-rata Harian:*",
+        "weekly_avg_cal": "• 🔥 Kalori: *{avg_cal} kkal/hari* _(Target: {target_cal} kkal)_",
+        "weekly_avg_prot": "• 💪 Protein: *{avg_prot}g/hari* _(Target: {target_prot}g)_",
+        "weekly_compliance": "• 🎯 Kepatuhan Target: *{met_days} dari {total_days} hari ({percent}%)*",
+        "weekly_chart_header": "📅 *Grafik Kalori 7 Hari:*",
+        "weekly_day_item": "• {day_name}: `{bar}` {cal} kkal {badge}",
+        "weekly_ai_coach_header": "💡 *Evaluasi AI Nutrition Coach:*",
+        "weekly_coach_fallback": "Pertahankan konsistensi pencatatan makananmu setiap hari untuk hasil optimal!",
+        "weekly_loading": "⏳ *Sedang menyusun laporan mingguan & evaluasi AI Coach...*",
 
         # ── Adjustments (/undo, /hapus, /settarget, /help) ──
         "undo_empty": "📭 Tidak ada entry makanan hari ini yang bisa dihapus.",
@@ -341,8 +360,10 @@ MESSAGES: dict[str, dict[str, str]] = {
 
         # ── Summary /summary ──
         "summary_title": "📊 *Today's summary, {name}!*",
-        "summary_logged_meals": "🍽️ *Logged meals today:*",
+        "summary_date_title": "📊 *Nutrition Summary ({date_str}), {name}!*",
+        "summary_logged_meals": "🍽️ *Logged meals:*",
         "summary_no_meals": "  _No meals logged yet today_",
+        "summary_no_meals_date": "  _No meals logged on this date_",
         "summary_nutrition_progress": "📈 *Nutrition progress:*",
         "summary_cal_line": "🔥 Calories: `{bar}` {total}/{target} kcal _{sisa}_",
         "summary_prot_line": "💪 Protein: `{bar}` {total}g/{target}g _{sisa}_",
@@ -356,6 +377,23 @@ MESSAGES: dict[str, dict[str, str]] = {
         "status_protein_75": "💪 Almost at your protein target, keep it up!",
         "status_protein_50": "📈 Halfway there, stay consistent!",
         "status_protein_low": "🥗 Don't forget to get your protein in today!",
+        "btn_prev_day": "◀️ {date_label}",
+        "btn_today": "🔄 Today",
+        "btn_next_day": "{date_label} ▶️",
+        "day_today": "Today",
+        "day_yesterday": "Yesterday",
+
+        # ── Weekly Report /weekly ──
+        "weekly_title": "📊 *7-Day Nutrition Report ({period}), {name}!*",
+        "weekly_averages_title": "📈 *Daily Averages:*",
+        "weekly_avg_cal": "• 🔥 Calories: *{avg_cal} kcal/day* _(Target: {target_cal} kcal)_",
+        "weekly_avg_prot": "• 💪 Protein: *{avg_prot}g/day* _(Target: {target_prot}g)_",
+        "weekly_compliance": "• 🎯 Goal Compliance: *{met_days} of {total_days} days ({percent}%)*",
+        "weekly_chart_header": "📅 *7-Day Calorie Progress:*",
+        "weekly_day_item": "• {day_name}: `{bar}` {cal} kcal {badge}",
+        "weekly_ai_coach_header": "💡 *AI Nutrition Coach Insights:*",
+        "weekly_coach_fallback": "Keep up your consistent daily logging for optimal health and fitness results!",
+        "weekly_loading": "⏳ *Generating your 7-day report & AI Coach evaluation...*",
 
         # ── Adjustments (/undo, /hapus, /settarget, /help) ──
         "undo_empty": "📭 No meals logged today to undo.",

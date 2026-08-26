@@ -123,7 +123,8 @@ python -m bot.main
 |---|---|---|
 | `/start` | Memulai bot, memilih bahasa, & setup target gizi | `/start` |
 | `/lang` | Mengganti bahasa antarmuka (ID / EN) | `/lang` atau `/lang en` |
-| `/summary` | Menampilkan ringkasan kalori & makro hari ini | `/summary` atau `/today` |
+| `/summary` | Ringkasan harian + tombol navigasi tanggal interaktif | `/summary` atau `/summary kemarin` |
+| `/weekly` | Laporan 7 hari: grafik batang, rata-rata, & AI Coach insight | `/weekly` atau `/mingguan` |
 | `/catat` | Mencatat makanan manual via teks | `/catat 1 porsi nasi padang ayam rendang` |
 | `/undo` | Menghapus makanan terakhir yang dicatat hari ini | `/undo` |
 | `/hapus` | Menghapus makanan berdasarkan kata kunci nama | `/hapus nasi goreng` |
@@ -173,13 +174,12 @@ CountYourCalories/
 - [x] **Scientific Nutrition Auto-Calculator**: Otomatis hitung BMR, TDEE, & target gizi via formula Mifflin-St Jeor & BJSM 2018.
 - [x] **Multi-Provider Fallback Switcher**: Otomatis switch ke OpenRouter / OpenAI jika primary provider mengalami 503/429.
 - [x] **Dockerization**: Image `python:3.11-slim` dan orkestrasi `docker-compose.yml`.
+- [x] **📈 Weekly Nutrition Analytics & AI Coach Insight**: Laporan 7 hari, grafik batang kalori, rata-rata, kepatuhan, & evaluasi AI Coach.
 - [ ] **🥗 RAG Food Nutrition Reference Database (Supabase)**:
   - Integrasi tabel referensi nutrisi resmi per 100g (Kemenkes RI TKPI & USDA FoodData).
   - Tool `search_food_reference` agar AI memverifikasi angka gizi ke database lab resmi sebelum mengestimasi.
 - [ ] **🥫 Barcode Scanner Integration**:
   - Scan barcode kemasan makanan/minuman via kamera untuk mengambil nutrisi instan dari *Open Food Facts*.
-- [ ] **📈 Weekly & Monthly Nutrition Analytics**:
-  - Visualisasi grafik progres mingguan/bulanan dan export laporan nutrisi.
 - [ ] **💧 Water Intake Tracker**:
   - Pencatatan asupan air harian (`/water` atau `/minum`).
 - [ ] **⏰ Smart Meal Reminders**:

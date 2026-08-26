@@ -367,15 +367,18 @@ docker compose down
 |---|---|---|
 | `/start` | `start.py` | Memulai alur registrasi & onboarding bilingual, atau menyapa user lama. |
 | `/lang` / `/language` | `language.py` | Menampilkan menu inline keyboard untuk mengganti bahasa antarmuka. |
-| `/summary` / `/today` | `summary.py` | Menampilkan laporan kalori, protein, karbohidrat, lemak, dan visual progress bar hari ini. |
+| `/summary [tgl]` | `summary.py` | Laporan kalori & makro harian dengan tombol navigasi tanggal interaktif (`[ ◀️ Kemarin ]` `[ 🔄 Hari Ini ]` `[ Besok ▶️ ]`). |
+| `/weekly` / `/mingguan` | `summary.py` | Laporan evaluasi 7 hari: grafik batang kalori harian, rata-rata, kepatuhan target, dan masukan personal dari AI Nutrition Coach. |
 | `/catat <makanan>` | `text.py` | Mencatat makanan secara manual via teks. |
 | `/undo` | `adjust.py` | Menghapus entri makanan terakhir yang dicatat hari ini. |
+| `/hapus <nama>` | `adjust.py` | Menghapus semua entri makanan hari ini yang cocok dengan nama tertentu. |
 | `/settarget [kal] [prot]` | `adjust.py` | Mode ganda: Shortcut instan `/settarget 2000 150` ATAU Wizard kalkulator ilmiah otomatis jika diketik `/settarget` saja. |
 | `/help` | `adjust.py` | Menampilkan panduan dan daftar seluruh perintah yang tersedia. |
 | *(Foto Makanan)* | `photo.py` | Menganalisis foto makanan secara otomatis menggunakan AI multimodal. |
 | *(Pesan Teks Bebas)* | `text.py` | Menginterpretasikan perintah penyesuaian natural language (NLP). |
 | `onboard_*` | `start.py` | Callback query pada alur onboarding & kalkulator /start. |
 | `recalc:*` | `adjust.py` | Callback query pada wizard hitung ulang target ilmiah /settarget. |
+| `summary_date:*` | `summary.py` | Callback query navigasi tanggal pada menu /summary. |
 | `set_lang:*` | `language.py` | Callback query saat user mengganti bahasa via menu `/lang`. |
 
 ---

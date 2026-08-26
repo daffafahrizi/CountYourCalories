@@ -5,7 +5,7 @@ Supabase client dan helper functions untuk operasi CRUD.
 """
 
 import os
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -248,3 +248,58 @@ def get_today_summary(user_id: str) -> dict:
         "total_fat": round(total_fat, 1),
         "entries": logs,
     }
+
+
+def _get_day_range_utc(target_date: date) -> tuple[str, str]:
+    """Mengembalikan (start_iso, end_iso) UTC untuk rentang 00:00:00 s.d 23:59:59.999999 waktu lokal suatu tanggal."""
+    local_tz = datetime.now().astimezone().tzinfo
+    local_start = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=local_tz)
+    local_end = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, 999999, tzinfo=local_tz)
+    return local_start.astimezone(timezone.utc).isoformat(), local_end.astimezone(timezone.utc).isoformat()
+
+
+def get_logs_by_date(user_id: str, target_date: date) -> list[dict]:
+    """Ambil semua food_logs pada tanggal tertentu untuk user."""
+    client = get_client()
+    start_utc, end_utc = _get_day_range_utc(target_date)
+    result = (
+        client.table("food_logs")
+        .select("*")
+        .eq("user_id", user_id)
+        .gte("logged_at", start_utc)
+        .lte("logged_at", end_utc)
+        .order("logged_at", desc=False)
+        .execute()
+    )
+    return result.data
+
+
+def get_date_summary(user_id: str, target_date: date) -> dict:
+    """
+    Hitung total kalori dan makronutrisi pada tanggal tertentu.
+    Return dict: date, total_calories, total_protein, total_carbs, total_fat, entries
+    """
+    logs = get_logs_by_date(user_id, target_date)
+    total_calories = sum(l.get("calories", 0) for l in logs)
+    total_protein = sum(l.get("protein_g", 0) for l in logs)
+    total_carbs = sum(l.get("carbs_g", 0) for l in logs)
+    total_fat = sum(l.get("fat_g", 0) for l in logs)
+    return {
+        "date": target_date,
+        "total_calories": total_calories,
+        "total_protein": round(total_protein, 1),
+        "total_carbs": round(total_carbs, 1),
+        "total_fat": round(total_fat, 1),
+        "entries": logs,
+    }
+
+
+def get_weekly_history(user_id: str, days: int = 7) -> list[dict]:
+    """Mengambil riwayat harian selama N hari terakhir (dari (days-1) hari lalu s.d hari ini)."""
+    today = datetime.now().astimezone().date()
+    history = []
+    for i in range(days - 1, -1, -1):
+        d = today - timedelta(days=i)
+        summary = get_date_summary(user_id, d)
+        history.append(summary)
+    return history
