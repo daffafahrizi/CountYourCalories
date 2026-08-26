@@ -2,21 +2,28 @@
 bot/agent/core.py
 
 Setup dan inisialisasi Antigravity agent sebagai otak dari CountYourCalories bot.
+Mendukung multi-provider fallback otomatis (Gemini -> OpenRouter / OpenAI).
 """
 
 import asyncio
+import logging
 import os
+from typing import Optional
+
 from google.antigravity import Agent, LocalAgentConfig
 from google.antigravity.types import Image
 
+from bot.agent.fallback import _image_to_base64_url, execute_fallback_chat
 from bot.agent.tools import (
-    log_food_items,
-    get_today_nutrition_summary,
-    delete_last_food_entry,
     delete_food_entry_by_name,
+    delete_last_food_entry,
     edit_food_entry,
+    get_today_nutrition_summary,
     get_user_targets,
+    log_food_items,
 )
+
+logger = logging.getLogger(__name__)
 
 # Timeout dalam detik untuk pemrosesan agent
 AGENT_TIMEOUT_SECONDS = 90
@@ -104,24 +111,18 @@ async def _collect_response(response) -> str:
     return result
 
 
-async def process_photo_message(
+def _has_fallback_provider() -> bool:
+    """Cek apakah ada provider cadangan di .env."""
+    return bool(os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY"))
+
+
+async def _run_gemini_photo(
     image_path: str,
     user_context: str,
     caption: str = "",
     language: str = "id",
 ) -> str:
-    """
-    Memproses foto makanan menggunakan Antigravity agent + Gemini multimodal.
-
-    Args:
-        image_path: Path lokal ke file gambar yang sudah didownload.
-        user_context: String berisi konteks user (id, nama, target, bahasa).
-        caption: Caption foto dari Telegram (jika ada).
-        language: Bahasa preferensi ('id' atau 'en').
-
-    Returns:
-        Respons teks dari agent.
-    """
+    """Jalankan analisis foto dengan Gemini Flash via Google Antigravity SDK."""
     config = create_agent_config()
     is_en = language.startswith("en")
 
@@ -159,22 +160,84 @@ async def process_photo_message(
     return await asyncio.wait_for(_run(), timeout=AGENT_TIMEOUT_SECONDS)
 
 
-async def process_text_message(
-    user_message: str,
+async def _run_fallback_photo(
+    image_path: str,
     user_context: str,
+    caption: str = "",
+    language: str = "id",
+) -> str:
+    """Jalankan analisis foto dengan OpenRouter / OpenAI fallback."""
+    is_en = language.startswith("en")
+    image_url = _image_to_base64_url(image_path)
+
+    instruction = (
+        f"[User Context]: {user_context}\n"
+        f"Photo note: {caption}\n"
+        "Analyze this food photo, estimate nutrition, and save to database using log_food_items."
+        if is_en
+        else f"[Konteks pengguna]: {user_context}\n"
+        f"Keterangan foto: {caption}\n"
+        "Analisis foto makanan ini, estimasikan nutrisinya, dan simpan ke database menggunakan log_food_items."
+    )
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": instruction},
+                {"type": "image_url", "image_url": {"url": image_url}},
+            ],
+        }
+    ]
+
+    return await execute_fallback_chat(
+        system_prompt=SYSTEM_PROMPT,
+        messages=messages,
+        timeout=AGENT_TIMEOUT_SECONDS,
+    )
+
+
+async def process_photo_message(
+    image_path: str,
+    user_context: str,
+    caption: str = "",
     language: str = "id",
 ) -> str:
     """
-    Memproses pesan teks dari user (input manual atau perintah adjustment).
-
-    Args:
-        user_message: Pesan teks dari pengguna.
-        user_context: String berisi konteks user (id, nama, target, bahasa).
-        language: Bahasa preferensi ('id' atau 'en').
-
-    Returns:
-        Respons teks dari agent.
+    Memproses foto makanan dengan primary Gemini + automatic fallback switcher.
     """
+    try:
+        return await _run_gemini_photo(
+            image_path=image_path,
+            user_context=user_context,
+            caption=caption,
+            language=language,
+        )
+    except Exception as e:
+        logger.warning(
+            f"⚠️ [PRIMARY AI] Gemini mengalami kendala: {e}. "
+            f"Mengecek ketersediaan provider fallback..."
+        )
+        if _has_fallback_provider():
+            logger.info("⚡ [FAILOVER] Mengaktifkan fallback model (OpenRouter / OpenAI)...")
+            try:
+                return await _run_fallback_photo(
+                    image_path=image_path,
+                    user_context=user_context,
+                    caption=caption,
+                    language=language,
+                )
+            except Exception as fallback_err:
+                logger.error(f"❌ [FALLBACK FAILED] {fallback_err}")
+                raise fallback_err
+        raise e
+
+
+async def _run_gemini_text(
+    user_message: str,
+    user_context: str,
+) -> str:
+    """Jalankan pemrosesan teks dengan Gemini Flash."""
     config = create_agent_config()
     full_prompt = f"[Konteks pengguna / User Context]: {user_context}\n\n{user_message}"
 
@@ -184,3 +247,52 @@ async def process_text_message(
             return await _collect_response(response)
 
     return await asyncio.wait_for(_run(), timeout=AGENT_TIMEOUT_SECONDS)
+
+
+async def _run_fallback_text(
+    user_message: str,
+    user_context: str,
+) -> str:
+    """Jalankan pemrosesan teks dengan fallback OpenRouter / OpenAI."""
+    messages = [
+        {
+            "role": "user",
+            "content": f"[Konteks pengguna / User Context]: {user_context}\n\n{user_message}",
+        }
+    ]
+    return await execute_fallback_chat(
+        system_prompt=SYSTEM_PROMPT,
+        messages=messages,
+        timeout=AGENT_TIMEOUT_SECONDS,
+    )
+
+
+async def process_text_message(
+    user_message: str,
+    user_context: str,
+    language: str = "id",
+) -> str:
+    """
+    Memproses pesan teks dengan primary Gemini + automatic fallback switcher.
+    """
+    try:
+        return await _run_gemini_text(
+            user_message=user_message,
+            user_context=user_context,
+        )
+    except Exception as e:
+        logger.warning(
+            f"⚠️ [PRIMARY AI] Gemini teks mengalami kendala: {e}. "
+            f"Mengecek ketersediaan provider fallback..."
+        )
+        if _has_fallback_provider():
+            logger.info("⚡ [FAILOVER] Mengaktifkan fallback model teks (OpenRouter / OpenAI)...")
+            try:
+                return await _run_fallback_text(
+                    user_message=user_message,
+                    user_context=user_context,
+                )
+            except Exception as fallback_err:
+                logger.error(f"❌ [FALLBACK FAILED] {fallback_err}")
+                raise fallback_err
+        raise e

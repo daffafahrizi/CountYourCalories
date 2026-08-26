@@ -1,107 +1,169 @@
 # CountYourCalories 🍱
 
-Asisten nutrisi agentic berbasis Telegram yang mencatat kalori dan makronutrisi harian otomatis dari foto makanan — powered by **Google Antigravity SDK** + **Gemini Flash**.
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg?logo=python&logoColor=white)](https://python.org)
+[![Telegram Bot API](https://img.shields.io/badge/Telegram_Bot_API-21.6-2CA5E0.svg?logo=telegram&logoColor=white)](https://core.telegram.org/bots/api)
+[![Google Antigravity](https://img.shields.io/badge/Agent_Framework-Google_Antigravity_SDK-4285F4.svg?logo=google&logoColor=white)](https://github.com/google)
+[![Gemini Multimodal](https://img.shields.io/badge/AI_Model-Gemini_Flash-8E75C2.svg?logo=google-gemini&logoColor=white)](https://ai.google.dev/)
+[![Supabase](https://img.shields.io/badge/Database-Supabase_PostgreSQL-3ECF8E.svg?logo=supabase&logoColor=white)](https://supabase.com)
+[![Docker](https://img.shields.io/badge/Deployment-Docker_%26_Compose-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
+[![i18n](https://img.shields.io/badge/Languages-ID_%7C_EN-success.svg)](./bot/locales.py)
 
-## Fitur
+Asisten nutrisi cerdas berbasis Telegram yang mencatat kalori dan makronutrisi harian secara otomatis dari foto makanan — ditenagai oleh **Google Antigravity SDK** + **Gemini Flash Multimodal Vision**.
 
-- 📸 **Foto Makanan** → Kirim foto, bot otomatis analisis semua komponen & catat nutrisinya
-- ✍️ **Input Manual** → Ketik nama makanan jika tidak punya foto
-- 📊 **Daily Summary** → `/summary` untuk melihat progress hari ini vs target
-- ↩️ **Quick Adjustments** → `/undo`, `/hapus`, dan perintah natural bahasa Indonesia
-- 👥 **Multi-User** → Setiap pengguna punya sesi & data terpisah
+---
 
-## Tech Stack
+## ✨ Fitur Utama (Key Features)
 
-| Komponen | Teknologi |
-|---|---|
-| Interface | Telegram Bot API (Polling) |
-| Agent Framework | Google Antigravity SDK |
-| AI / Vision | Gemini Flash (multimodal) |
-| Database | Supabase (PostgreSQL) |
-| Language | Python 3.11+ |
+- 📸 **Analisis Foto Makanan Otomatis:** Cukup kirimkan foto makananmu, AI akan mengidentifikasi seluruh komponen makanan, mengestimasi porsi, kalori, serta makronutrisi (protein, karbohidrat, lemak).
+- 🌐 **Dukungan Dwibahasa (Bilingual i18n):** Mendukung penuh **Bahasa Indonesia** 🇮🇩 dan **English** 🇬🇧 dengan deteksi otomatis dan menu pergantian bahasa via `/lang`.
+- ✍️ **Pencatatan Teks Manual:** Fitur `/catat <makanan>` untuk mencatat makanan ketika tidak memiliki foto.
+- 📊 **Ringkasan Harian Visual:** Command `/summary` atau `/today` menyajikan laporan progres harian lengkap dengan indikator progress bar dan sisa kuota nutrisi.
+- ↩️ **Koreksi Cepat & NLP:** Fitur `/undo`, `/hapus <nama>`, `/settarget`, serta perintah bahasa natural (misal: *"hapus ayam bakar tadi"*).
+- 🐳 **Docker Ready:** Siap dijalankan di server/VPS 24/7 dengan Docker Compose & auto-restart.
 
-## Setup
+---
 
-### 1. Clone & Install Dependencies
+## 🏗️ Arsitektur Sistem (High-Level Architecture)
+
+```
++-----------------------------------------------------------------------------------+
+|                                  COUNTYOURCALORIES                                |
+|                                                                                   |
+|  [ Telegram User ]  <--->  [ PTB Dispatcher ]  <--->  [ Antigravity Agent ]       |
+|                                     |                          |                  |
+|                              [ i18n Locales ]          [ Gemini Multimodal ]      |
+|                                                                |                  |
+|                                                       [ Python Tools ]            |
+|                                                                |                  |
+|                                                    [ Supabase PostgreSQL ]        |
++-----------------------------------------------------------------------------------+
+```
+
+> 📖 **Dokumentasi Teknis Menyeluruh:** Silakan baca [**docs/ARCHITECTURE.md**](./docs/ARCHITECTURE.md) untuk detail arsitektur lengkap, diagram urutan (sequence diagrams), spesifikasi tool calling, dan perancangan database ERD.
+
+---
+
+## 🚀 Panduan Memulai (Quick Start)
+
+### 1. Prasyarat (Prerequisites)
+- Python 3.11+ atau Docker Desktop
+- Akun Telegram (untuk membuat bot via [@BotFather](https://t.me/BotFather))
+- Database [Supabase](https://supabase.com) (Gratis)
+- API Key [Google AI Studio](https://aistudio.google.com/app/api-keys) (Gemini)
+
+---
+
+### 2. Clone Repository & Konfigurasi Environment
 
 ```bash
 # Clone repo
-git clone <repo-url>
+git clone https://github.com/daffafahrizi/CountYourCalories.git
 cd CountYourCalories
 
-# Buat virtual environment
-python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Mac/Linux
-
-# Install dependencies
-pip install -r requirements.txt
+# Salin template konfigurasi .env
+cp .env.example .env
 ```
 
-### 2. Konfigurasi Environment Variables
-
-```bash
-# Salin template
-copy .env.example .env
-```
-
-Edit file `.env` dengan nilai yang benar:
-
+Buka dan lengkapi file `.env`:
 ```env
-TELEGRAM_BOT_TOKEN=   # Dari @BotFather di Telegram
-SUPABASE_URL=         # https://your-project.supabase.co
-SUPABASE_ANON_KEY=    # Dari Settings > API di dashboard Supabase
-GEMINI_API_KEY=       # Dari https://aistudio.google.com/app/api-keys
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+
+# Supabase
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# Gemini / Google AI Studio
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-### 3. Setup Database (Supabase)
+---
 
-1. Buka [Supabase Dashboard](https://supabase.com)
-2. Buat project baru
-3. Buka **SQL Editor**
-4. Paste dan jalankan isi file `supabase_schema.sql`
+### 3. Setup Database Supabase
 
-### 4. Jalankan Bot
+1. Buka dashboard project kamu di [Supabase](https://supabase.com).
+2. Masuk ke menu **SQL Editor**.
+3. Salin dan jalankan seluruh isi file [`supabase_schema.sql`](./supabase_schema.sql).
 
+---
+
+### 4. Menjalankan Bot
+
+Pilih salah satu metode berikut:
+
+#### Opsi A: Menggunakan Docker Compose (Direkomendasikan untuk Server/VPS)
 ```bash
+# Jalankan bot di latar belakang
+docker compose up -d --build
+
+# Melihat log bot secara realtime
+docker compose logs -f
+```
+
+#### Opsi B: Menjalankan Langsung via Python Virtual Environment (Lokal)
+```bash
+# Buat dan aktifkan virtual environment
+python -m venv venv
+venv\Scripts\activate      # Di Windows
+# source venv/bin/activate # Di macOS/Linux
+
+# Install dependensi
+pip install -r requirements.txt
+
+# Jalankan bot
 python -m bot.main
 ```
 
-Bot akan mulai polling dan siap digunakan! Cari bot kamu di Telegram dan kirim `/start`.
+---
 
-## Perintah Bot
+## 📱 Daftar Perintah Bot (Commands)
 
-| Perintah | Fungsi |
-|---|---|
-| `/start` | Registrasi & onboarding |
-| `/summary` atau `/today` | Lihat ringkasan nutrisi hari ini |
-| `/undo` | Hapus entry terakhir |
-| `/hapus <nama>` | Hapus entry by nama, contoh: `/hapus nasi goreng` |
-| `/settarget <kal> <prot>` | Update target, contoh: `/settarget 2000 150` |
-| `/help` | Bantuan lengkap |
-| _(kirim foto)_ | Catat otomatis dari foto |
-| _(ketik makanan)_ | Catat manual via teks |
+| Perintah | Fungsi | Contoh Penggunaan |
+|---|---|---|
+| `/start` | Memulai bot, memilih bahasa, & setup target gizi | `/start` |
+| `/lang` | Mengganti bahasa antarmuka (ID / EN) | `/lang` atau `/lang en` |
+| `/summary` | Menampilkan ringkasan kalori & makro hari ini | `/summary` atau `/today` |
+| `/catat` | Mencatat makanan manual via teks | `/catat 1 porsi nasi padang ayam rendang` |
+| `/undo` | Menghapus makanan terakhir yang dicatat hari ini | `/undo` |
+| `/hapus` | Menghapus makanan berdasarkan kata kunci nama | `/hapus nasi goreng` |
+| `/settarget` | Memperbarui target kalori dan protein harian | `/settarget 2200 160` |
+| `/help` | Menampilkan panduan bantuan lengkap | `/help` |
+| *(Kirim Foto)* | Bot otomatis menganalisis dan mencatat foto | *(Kirim foto makanan langsung)* |
 
-## Struktur Project
+---
+
+## 📁 Struktur Direktori Project
 
 ```
 CountYourCalories/
 ├── bot/
-│   ├── main.py               # Entry point
+│   ├── main.py               # Entry point bot & registrasi dispatcher
+│   ├── locales.py            # Kamus terpusat i18n (Bahasa Indonesia & English)
 │   ├── handlers/
-│   │   ├── start.py          # /start + onboarding
-│   │   ├── photo.py          # Handler foto makanan
-│   │   ├── text.py           # Handler input teks
-│   │   ├── summary.py        # /summary, /today
-│   │   └── adjust.py         # /undo, /hapus, /help
+│   │   ├── start.py          # Alur onboarding & pemilihan bahasa
+│   │   ├── language.py       # Handler switcher /lang & callback query
+│   │   ├── photo.py          # Handler analisis foto makanan (Vision)
+│   │   ├── text.py           # Handler input manual /catat & NLP adjustment
+│   │   ├── summary.py        # Handler laporan /summary & /today
+│   │   └── adjust.py         # Handler /undo, /hapus, /settarget, /help
 │   ├── agent/
-│   │   ├── core.py           # Antigravity agent
-│   │   ├── tools.py          # Tool definitions
-│   │   └── schemas.py        # Pydantic models
+│   │   ├── core.py           # Inisialisasi Antigravity Agent & Gemini Multimodal
+│   │   ├── tools.py          # Definisi Function Calling tools untuk Agent
+│   │   └── schemas.py        # Pydantic validation schemas
 │   └── db/
-│       └── supabase.py       # Supabase CRUD helpers
-├── supabase_schema.sql       # Database schema
-├── .env.example              # Template env vars
-├── requirements.txt          # Python dependencies
-└── README.md
+│       └── supabase.py       # Supabase CRUD & helper functions
+├── docs/
+│   └── ARCHITECTURE.md       # Dokumentasi teknis & arsitektur mendalam
+├── Dockerfile                # Image blueprint (Python 3.11-slim)
+├── docker-compose.yml        # Multi-container orchestrator config
+├── .dockerignore             # Docker build filter
+├── supabase_schema.sql       # Skema DDL & policy PostgreSQL
+├── requirements.txt          # Daftar dependensi Python
+├── .env.example              # Template environment variables
+└── README.md                 # Dokumentasi utama project
 ```
+
+---
+
+## 📄 Lisensi
+Project ini dibuat untuk tujuan edukasi dan penggunaan personal. Bebas dikembangkan lebih lanjut.
