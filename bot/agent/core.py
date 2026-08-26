@@ -1,19 +1,26 @@
 """
 bot/agent/core.py
 
-Setup dan inisialisasi Antigravity agent sebagai otak dari CountYourCalories bot.
-Mendukung multi-provider fallback otomatis (Gemini -> OpenRouter / OpenAI).
+Setup dan inisialisasi AI agent sebagai otak dari CountYourCalories bot.
+Menggunakan direct asynchronous Gemini 3.6-Flash API dengan dynamic multi-turn tool calling,
+serta dilengkapi multi-tier automatic failover (Gemini 3.6 -> Gemini 2.5 -> OpenRouter / OpenAI).
 """
 
 import asyncio
+import base64
+import json
 import logging
+import mimetypes
 import os
-from typing import Optional
+from typing import Any, Optional
 
-from google.antigravity import Agent, LocalAgentConfig
-from google.antigravity.types import Image
+import httpx
+from dotenv import load_dotenv
 
-from bot.agent.fallback import _image_to_base64_url, execute_fallback_chat
+# Pastikan .env selalu ter-load dari project root
+load_dotenv(os.path.join(os.getcwd(), ".env"), override=True)
+
+from bot.agent.fallback import execute_fallback_chat
 from bot.agent.tools import (
     delete_food_entry_by_name,
     delete_last_food_entry,
@@ -25,8 +32,77 @@ from bot.agent.tools import (
 
 logger = logging.getLogger(__name__)
 
-# Timeout dalam detik untuk pemrosesan agent
-AGENT_TIMEOUT_SECONDS = 90
+# Timeout per request AI (detik)
+AI_TIMEOUT_SECONDS = 30.0
+
+TOOL_MAPPING = {
+    "log_food_items": log_food_items,
+    "get_today_nutrition_summary": get_today_nutrition_summary,
+    "delete_last_food_entry": delete_last_food_entry,
+    "delete_food_entry_by_name": delete_food_entry_by_name,
+    "edit_food_entry": edit_food_entry,
+    "get_user_targets": get_user_targets,
+}
+
+GEMINI_TOOLS_SCHEMA = [
+    {
+        "function_declarations": [
+            {
+                "name": "log_food_items",
+                "description": "Menyimpan item makanan yang diidentifikasi ke database untuk pengguna.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "items": {
+                            "type": "ARRAY",
+                            "description": "Daftar makanan yang teridentifikasi.",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "meal_name": {"type": "STRING", "description": "Nama makanan"},
+                                    "calories": {"type": "INTEGER", "description": "Estimasi total kalori (kkal)"},
+                                    "protein_g": {"type": "NUMBER", "description": "Estimasi protein (gram)"},
+                                    "carbs_g": {"type": "NUMBER", "description": "Estimasi karbohidrat (gram)"},
+                                    "fat_g": {"type": "NUMBER", "description": "Estimasi lemak (gram)"},
+                                    "source": {"type": "STRING", "enum": ["photo", "text"]}
+                                },
+                                "required": ["meal_name", "calories", "protein_g"]
+                            }
+                        }
+                    },
+                    "required": ["items"]
+                }
+            },
+            {
+                "name": "get_today_nutrition_summary",
+                "description": "Mengambil total nutrisi yang sudah dikonsumsi pengguna hari ini.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {}
+                }
+            },
+            {
+                "name": "delete_last_food_entry",
+                "description": "Menghapus entri makanan terakhir yang dicatat hari ini (undo).",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {}
+                }
+            },
+            {
+                "name": "delete_food_entry_by_name",
+                "description": "Menghapus entri makanan hari ini berdasarkan nama makanan.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "meal_name": {"type": "STRING", "description": "Nama makanan yang ingin dihapus"}
+                    },
+                    "required": ["meal_name"]
+                }
+            }
+        ]
+    }
+]
 
 SYSTEM_PROMPT = """
 You are CountYourCalories, a smart nutrition assistant bot on Telegram.
@@ -57,144 +133,194 @@ Your mission is to help users effortlessly log and track their daily calories an
 ```
 ✅ Berhasil dicatat!
 
-[Emoji] [Nama Makanan] — [kalori] kkal
-  Protein: [x]g | Karbo: [x]g | Lemak: [x]g
+🍛 Nasi Goreng Telur — 350 kkal
+  Protein: 12g | Karbo: 45g | Lemak: 14g
 
 📊 Progress hari ini:
-🔥 Kalori: [total]/[target] kkal ([sisa] sisa)
-💪 Protein: [total]/[target]g ([sisa]g sisa)
+🔥 Kalori: 850/1700 kkal (850 kkal sisa)
+💪 Protein: 42/130g (88g sisa)
 ```
 
 ### When language is English (`en`):
 ```
 ✅ Logged successfully!
 
-[Emoji] [Food Name] — [calories] kcal
-  Protein: [x]g | Carbs: [x]g | Fat: [x]g
+🍛 Fried Rice with Egg — 350 kcal
+  Protein: 12g | Carbs: 45g | Fat: 14g
 
 📊 Today's Progress:
-🔥 Calories: [total]/[target] kcal ([remaining] left)
-💪 Protein: [total]/[target]g ([remaining]g left)
+🔥 Calories: 850/1700 kcal (850 kcal left)
+💪 Protein: 42/130g (88g left)
 ```
 """.strip()
 
 
-def create_agent_config() -> LocalAgentConfig:
-    """Membuat konfigurasi Antigravity agent dengan API key."""
+def _extract_user_id(user_context: str) -> str:
+    """Mengambil UUID user_id dari string context."""
+    for part in user_context.split(","):
+        part = part.strip()
+        if part.startswith("user_id="):
+            return part.split("user_id=")[1].strip()
+    return ""
+
+
+def _image_to_gemini_part(image_path: str) -> dict:
+    """Mengubah file gambar lokal menjadi payload inlineData Gemini."""
+    mime, _ = mimetypes.guess_type(image_path)
+    mime = mime or "image/jpeg"
+    with open(image_path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode("utf-8")
+    return {
+        "inline_data": {
+            "mime_type": mime,
+            "data": encoded
+        }
+    }
+
+
+async def _execute_gemini_turns(
+    contents: list[dict],
+    user_id: str,
+    model: str = "gemini-3.6-flash",
+    max_turns: int = 5,
+    timeout: float = AI_TIMEOUT_SECONDS,
+) -> str:
+    """
+    Menjalankan percakapan Gemini dengan dynamic multi-turn tool calling loop via HTTP.
+    """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise RuntimeError(
-            "GEMINI_API_KEY tidak ditemukan! Pastikan file .env sudah dikonfigurasi."
-        )
-    return LocalAgentConfig(
-        api_key=api_key,
-        system_instructions=SYSTEM_PROMPT,
-        tools=[
-            log_food_items,
-            get_today_nutrition_summary,
-            delete_last_food_entry,
-            delete_food_entry_by_name,
-            edit_food_entry,
-            get_user_targets,
-        ],
-    )
+        raise RuntimeError("GEMINI_API_KEY tidak ditemukan di .env!")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        for turn in range(max_turns):
+            payload = {
+                "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+                "contents": contents,
+                "tools": GEMINI_TOOLS_SCHEMA,
+            }
+            res = await client.post(url, json=payload)
+            if res.status_code != 200:
+                raise RuntimeError(f"Gemini {model} API error ({res.status_code}): {res.text[:200]}")
+
+            data = res.json()
+            candidates = data.get("candidates", [])
+            if not candidates:
+                return ""
+
+            parts = candidates[0].get("content", {}).get("parts", [])
+            fn_call = next((p for p in parts if "functionCall" in p), None)
+
+            if fn_call:
+                fn_name = fn_call["functionCall"]["name"]
+                fn_args = fn_call["functionCall"].get("args", {})
+                logger.info(f"⚙️ [TOOL CALL Turn {turn+1}] {fn_name} with args: {fn_args}")
+
+                fn = TOOL_MAPPING.get(fn_name)
+                if fn:
+                    try:
+                        if fn_name == "log_food_items":
+                            tool_res = fn(user_id=user_id, items=fn_args.get("items", []))
+                        elif fn_name in ["get_today_nutrition_summary", "delete_last_food_entry"]:
+                            tool_res = fn(user_id=user_id)
+                        elif fn_name == "delete_food_entry_by_name":
+                            tool_res = fn(user_id=user_id, meal_name=fn_args.get("meal_name", ""))
+                        else:
+                            tool_res = fn(**fn_args)
+                    except Exception as e:
+                        tool_res = f"Error executing {fn_name}: {e}"
+                else:
+                    tool_res = f"Tool {fn_name} not found"
+
+                # Append model tool_call & user functionResponse
+                contents.append({"role": "model", "parts": [fn_call]})
+                contents.append({
+                    "role": "user",
+                    "parts": [{
+                        "functionResponse": {
+                            "name": fn_name,
+                            "response": {"result": tool_res}
+                        }
+                    }]
+                })
+                # Lanjut ke turn berikutnya
+                continue
+
+            # Jika tidak ada function call, kita sudah mendapatkan respon teks akhir
+            text_parts = [p.get("text", "") for p in parts if "text" in p]
+            return "".join(text_parts).strip()
+
+    return ""
 
 
-async def _collect_response(response) -> str:
-    """Kumpulkan semua chunk streaming dari response agent."""
-    chunks = []
-    async for chunk in response:
-        chunks.append(chunk)
-    result = "".join(chunks).strip()
-    if not result and hasattr(response, "text"):
-        result = await response.text()
-    return result
-
-
-def _has_fallback_provider() -> bool:
-    """Cek apakah ada provider cadangan di .env."""
-    return bool(os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY"))
-
-
-async def _run_gemini_photo(
-    image_path: str,
+async def _run_gemini_with_fallback(
+    contents: list[dict],
     user_context: str,
-    caption: str = "",
     language: str = "id",
 ) -> str:
-    """Jalankan analisis foto dengan Gemini Flash via Google Antigravity SDK."""
-    config = create_agent_config()
-    is_en = language.startswith("en")
+    """
+    Menjalankan Gemini 3.6-flash, dengan fallback bertingkat:
+    1. Gemini 3.6-flash (Primary - Ultra Fast)
+    2. Gemini 2.5-flash (Secondary Gemini)
+    3. OpenRouter / OpenAI (Tertiary Fallback)
+    """
+    user_id = _extract_user_id(user_context)
 
-    if is_en:
-        prompt_parts = [
-            f"[User Context]: {user_context}\n\n",
-            "This is a photo of the food I just ate. ",
-        ]
-        if caption:
-            prompt_parts.append(f"My note: {caption}. ")
-        prompt_parts.append(
-            "Please analyze all food items in this photo, estimate their nutritional values, "
-            "and save them to the database using log_food_items."
+    # 1. Coba Gemini 3.6-flash
+    try:
+        res = await _execute_gemini_turns(contents=contents, user_id=user_id, model="gemini-3.6-flash")
+        if res:
+            return res
+    except Exception as e1:
+        logger.warning(f"⚠️ [PRIMARY AI] Gemini 3.6-flash terkendala: {e1}. Mencoba Gemini 2.5-flash...")
+
+    # 2. Coba Gemini 2.5-flash
+    try:
+        res = await _execute_gemini_turns(contents=contents, user_id=user_id, model="gemini-2.5-flash")
+        if res:
+            return res
+    except Exception as e2:
+        logger.warning(f"⚠️ [PRIMARY AI] Gemini 2.5-flash terkendala: {e2}. Mengecek OpenRouter/OpenAI fallback...")
+
+    # 3. Coba OpenRouter / OpenAI fallback
+    if os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY"):
+        logger.info("⚡ [FAILOVER] Mengaktifkan provider cadangan (OpenRouter/OpenAI)...")
+        # Ekstrak teks dari contents untuk format OpenAI
+        text_prompt = ""
+        image_part = None
+        for c in contents:
+            for p in c.get("parts", []):
+                if "text" in p:
+                    text_prompt += p["text"] + "\n"
+                elif "inline_data" in p:
+                    mime = p["inline_data"].get("mime_type", "image/jpeg")
+                    data = p["inline_data"].get("data", "")
+                    image_part = f"data:{mime};base64,{data}"
+
+        messages = []
+        if image_part:
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": text_prompt},
+                    {"type": "image_url", "image_url": {"url": image_part}},
+                ]
+            })
+        else:
+            messages.append({
+                "role": "user",
+                "content": text_prompt
+            })
+
+        return await execute_fallback_chat(
+            system_prompt=SYSTEM_PROMPT,
+            messages=messages,
+            timeout=AI_TIMEOUT_SECONDS,
         )
-    else:
-        prompt_parts = [
-            f"[Konteks pengguna]: {user_context}\n\n",
-            "Ini adalah foto makanan yang baru saja saya makan. ",
-        ]
-        if caption:
-            prompt_parts.append(f"Keterangan dari saya: {caption}. ")
-        prompt_parts.append(
-            "Tolong analisis semua makanan yang ada di foto ini, estimasikan nutrisinya, "
-            "dan simpan ke database menggunakan log_food_items."
-        )
 
-    image = Image.from_file(image_path)
-    full_prompt = ["".join(prompt_parts), image]
-
-    async def _run():
-        async with Agent(config) as agent:
-            response = await agent.chat(full_prompt)
-            return await _collect_response(response)
-
-    return await asyncio.wait_for(_run(), timeout=AGENT_TIMEOUT_SECONDS)
-
-
-async def _run_fallback_photo(
-    image_path: str,
-    user_context: str,
-    caption: str = "",
-    language: str = "id",
-) -> str:
-    """Jalankan analisis foto dengan OpenRouter / OpenAI fallback."""
-    is_en = language.startswith("en")
-    image_url = _image_to_base64_url(image_path)
-
-    instruction = (
-        f"[User Context]: {user_context}\n"
-        f"Photo note: {caption}\n"
-        "Analyze this food photo, estimate nutrition, and save to database using log_food_items."
-        if is_en
-        else f"[Konteks pengguna]: {user_context}\n"
-        f"Keterangan foto: {caption}\n"
-        "Analisis foto makanan ini, estimasikan nutrisinya, dan simpan ke database menggunakan log_food_items."
-    )
-
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": instruction},
-                {"type": "image_url", "image_url": {"url": image_url}},
-            ],
-        }
-    ]
-
-    return await execute_fallback_chat(
-        system_prompt=SYSTEM_PROMPT,
-        messages=messages,
-        timeout=AGENT_TIMEOUT_SECONDS,
-    )
+    raise RuntimeError("Seluruh AI provider sedang tidak dapat dijangkau. Silakan coba sesaat lagi.")
 
 
 async def process_photo_message(
@@ -204,67 +330,38 @@ async def process_photo_message(
     language: str = "id",
 ) -> str:
     """
-    Memproses foto makanan dengan primary Gemini + automatic fallback switcher.
+    Memproses foto makanan menggunakan Vision AI.
     """
-    try:
-        return await _run_gemini_photo(
-            image_path=image_path,
-            user_context=user_context,
-            caption=caption,
-            language=language,
+    is_en = language.startswith("en")
+    if is_en:
+        prompt_text = (
+            f"[User Context]: {user_context}\n\n"
+            f"This is a photo of the food I just ate. "
+            f"{'Note: ' + caption if caption else ''}\n"
+            f"Please analyze all food items in this photo, estimate their nutritional values, "
+            f"and save them to the database using log_food_items."
         )
-    except Exception as e:
-        logger.warning(
-            f"⚠️ [PRIMARY AI] Gemini mengalami kendala: {e}. "
-            f"Mengecek ketersediaan provider fallback..."
+    else:
+        prompt_text = (
+            f"[Konteks pengguna]: {user_context}\n\n"
+            f"Ini adalah foto makanan yang baru saja saya makan. "
+            f"{'Keterangan: ' + caption if caption else ''}\n"
+            f"Tolong analisis semua makanan di foto ini, estimasikan nutrisinya, "
+            f"dan simpan ke database menggunakan log_food_items."
         )
-        if _has_fallback_provider():
-            logger.info("⚡ [FAILOVER] Mengaktifkan fallback model (OpenRouter / OpenAI)...")
-            try:
-                return await _run_fallback_photo(
-                    image_path=image_path,
-                    user_context=user_context,
-                    caption=caption,
-                    language=language,
-                )
-            except Exception as fallback_err:
-                logger.error(f"❌ [FALLBACK FAILED] {fallback_err}")
-                raise fallback_err
-        raise e
 
-
-async def _run_gemini_text(
-    user_message: str,
-    user_context: str,
-) -> str:
-    """Jalankan pemrosesan teks dengan Gemini Flash."""
-    config = create_agent_config()
-    full_prompt = f"[Konteks pengguna / User Context]: {user_context}\n\n{user_message}"
-
-    async def _run():
-        async with Agent(config) as agent:
-            response = await agent.chat(full_prompt)
-            return await _collect_response(response)
-
-    return await asyncio.wait_for(_run(), timeout=AGENT_TIMEOUT_SECONDS)
-
-
-async def _run_fallback_text(
-    user_message: str,
-    user_context: str,
-) -> str:
-    """Jalankan pemrosesan teks dengan fallback OpenRouter / OpenAI."""
-    messages = [
+    image_part = _image_to_gemini_part(image_path)
+    contents = [
         {
             "role": "user",
-            "content": f"[Konteks pengguna / User Context]: {user_context}\n\n{user_message}",
+            "parts": [
+                {"text": prompt_text},
+                image_part,
+            ]
         }
     ]
-    return await execute_fallback_chat(
-        system_prompt=SYSTEM_PROMPT,
-        messages=messages,
-        timeout=AGENT_TIMEOUT_SECONDS,
-    )
+
+    return await _run_gemini_with_fallback(contents, user_context, language)
 
 
 async def process_text_message(
@@ -273,26 +370,13 @@ async def process_text_message(
     language: str = "id",
 ) -> str:
     """
-    Memproses pesan teks dengan primary Gemini + automatic fallback switcher.
+    Memproses pesan teks pencatatan atau adjustment makanan.
     """
-    try:
-        return await _run_gemini_text(
-            user_message=user_message,
-            user_context=user_context,
-        )
-    except Exception as e:
-        logger.warning(
-            f"⚠️ [PRIMARY AI] Gemini teks mengalami kendala: {e}. "
-            f"Mengecek ketersediaan provider fallback..."
-        )
-        if _has_fallback_provider():
-            logger.info("⚡ [FAILOVER] Mengaktifkan fallback model teks (OpenRouter / OpenAI)...")
-            try:
-                return await _run_fallback_text(
-                    user_message=user_message,
-                    user_context=user_context,
-                )
-            except Exception as fallback_err:
-                logger.error(f"❌ [FALLBACK FAILED] {fallback_err}")
-                raise fallback_err
-        raise e
+    prompt_text = f"[Konteks pengguna / User Context]: {user_context}\n\n{user_message}"
+    contents = [
+        {
+            "role": "user",
+            "parts": [{"text": prompt_text}]
+        }
+    ]
+    return await _run_gemini_with_fallback(contents, user_context, language)

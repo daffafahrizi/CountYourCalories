@@ -165,5 +165,25 @@ CountYourCalories/
 
 ---
 
+## 🗺️ Roadmap & Rencana Masa Depan (Future Plans)
+
+- [x] **Core AI Vision Logging**: Analisis foto makanan otomatis via Gemini Flash.
+- [x] **Bilingual Support (i18n)**: Dukungan penuh Bahasa Indonesia 🇮🇩 & English 🇬🇧.
+- [x] **Multi-Provider Fallback Switcher**: Otomatis switch ke OpenRouter / OpenAI jika primary provider mengalami 503/429.
+- [x] **Dockerization**: Image `python:3.11-slim` dan orkestrasi `docker-compose.yml`.
+- [ ] **🥗 RAG Food Nutrition Reference Database (Supabase)**:
+  - Integrasi tabel referensi nutrisi resmi per 100g (Kemenkes RI TKPI & USDA FoodData).
+  - Tool `search_food_reference` agar AI memverifikasi angka gizi ke database lab resmi sebelum mengestimasi.
+- [ ] **🥫 Barcode Scanner Integration**:
+  - Scan barcode kemasan makanan/minuman via kamera untuk mengambil nutrisi instan dari *Open Food Facts*.
+- [ ] **📈 Weekly & Monthly Nutrition Analytics**:
+  - Visualisasi grafik progres mingguan/bulanan dan export laporan nutrisi.
+- [ ] **💧 Water Intake Tracker**:
+  - Pencatatan asupan air harian (`/water` atau `/minum`).
+- [ ] **⏰ Smart Meal Reminders**:
+  - Notifikasi pengingat makan terjadwal (Sarapan, Makan Siang, Makan Malam).
+
+---
+
 ## 📄 Lisensi
 Project ini dibuat untuk tujuan edukasi dan penggunaan personal. Bebas dikembangkan lebih lanjut.

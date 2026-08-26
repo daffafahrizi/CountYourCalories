@@ -360,3 +360,33 @@ docker compose down
 | *(Pesan Teks Bebas)* | `text.py` | Menginterpretasikan perintah penyesuaian natural language (NLP). |
 | `onboard_lang:*` | `start.py` | Callback query saat user memilih bahasa di alur onboarding. |
 | `set_lang:*` | `language.py` | Callback query saat user mengganti bahasa via menu `/lang`. |
+
+---
+
+## 10. Peta Jalan Pengembangan (Future Architecture Roadmap)
+
+Berikut adalah desain arsitektural untuk fitur-fitur yang direncanakan pada iterasi pengembangan berikutnya:
+
+### 10.1 RAG Food Nutrition Reference Database
+- **Tujuan:** Meningkatkan presisi angka kalori dan makronutrisi mendekati 100% data uji laboratorium.
+- **Rancangan:**
+  - Tabel Supabase `food_reference` yang memuat ~500–1.000 data pangan lokal (TKPI Kemenkes RI) dan global (USDA FoodData Central).
+  - Tool agent baru: `search_food_reference(query: str) -> list[dict]`.
+  - Pola eksekusi: Gemini mendeteksi bahan makanan & gramasi visual, melakukan query ke `food_reference`, menghitung nilai presisi, lalu menyimpannya ke `food_logs`.
+
+### 10.2 Barcode Scanner & Packaged Food Recognition
+- **Tujuan:** Memudahkan pencatatan makanan/minuman kemasan (snack, susu, biskuit, suplemen) hanya dengan memfoto barcode produk.
+- **Rancangan:**
+  - Integrasi API publik *Open Food Facts* via barcode scanner.
+
+### 10.3 Weekly / Monthly Nutrition Analytics & Export
+- **Tujuan:** Menyediakan insight tren asupan gizi jangka panjang bagi pengguna.
+- **Rancangan:**
+  - Command `/analytics` atau `/report` yang menghasilkan grafik visual (PNG) menggunakan `matplotlib` atau ringkasan mingguan.
+
+### 10.4 Water Intake Tracker & Smart Meal Reminders
+- **Tujuan:** Memperluas fungsi asisten kesehatan ke hidrasi dan konsistensi jam makan.
+- **Rancangan:**
+  - Tabel `water_logs` untuk pelacakan asupan cairan harian (`/water` atau `/minum`).
+  - Scheduled cron triggers untuk notifikasi pengingat makan pagi, siang, dan malam.
+
