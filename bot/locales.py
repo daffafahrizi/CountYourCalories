@@ -471,7 +471,7 @@ def t(key: str, lang: str = "id", **kwargs: Any) -> str:
     Mengambil string terjemahan berdasarkan key dan bahasa ('id' atau 'en').
     Dilengkapi fallback otomatis ke 'id' atau key jika teks tidak ditemukan.
     """
-    lang_code = "en" if str(lang).lower().startswith("en") else "id"
+    lang_code = "en" if (lang or "id").lower().startswith("en") else "id"
     dictionary = MESSAGES.get(lang_code, MESSAGES["id"])
     text_template = dictionary.get(key)
 

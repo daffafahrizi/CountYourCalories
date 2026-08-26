@@ -163,6 +163,18 @@ def _extract_user_id(user_context: str) -> str:
     return ""
 
 
+def _extract_telegram_id(user_context: str) -> int:
+    """Mengambil integer telegram_id dari string context."""
+    for part in user_context.split(","):
+        part = part.strip()
+        if part.startswith("telegram_id="):
+            try:
+                return int(part.split("telegram_id=")[1].strip())
+            except ValueError:
+                return 0
+    return 0
+
+
 def _image_to_gemini_part(image_path: str) -> dict:
     """Mengubah file gambar lokal menjadi payload inlineData Gemini."""
     mime, _ = mimetypes.guess_type(image_path)
@@ -180,6 +192,7 @@ def _image_to_gemini_part(image_path: str) -> dict:
 async def _execute_gemini_turns(
     contents: list[dict],
     user_id: str,
+    telegram_id: int = 0,
     model: str = "gemini-3.6-flash",
     max_turns: int = 5,
     timeout: float = AI_TIMEOUT_SECONDS,
@@ -217,21 +230,24 @@ async def _execute_gemini_turns(
                 fn_args = fn_call["functionCall"].get("args", {})
                 logger.info(f"⚙️ [TOOL CALL Turn {turn+1}] {fn_name} with args: {fn_args}")
 
-                fn = TOOL_MAPPING.get(fn_name)
-                if fn:
-                    try:
-                        if fn_name == "log_food_items":
-                            tool_res = fn(user_id=user_id, items=fn_args.get("items", []))
-                        elif fn_name in ["get_today_nutrition_summary", "delete_last_food_entry"]:
-                            tool_res = fn(user_id=user_id)
-                        elif fn_name == "delete_food_entry_by_name":
-                            tool_res = fn(user_id=user_id, meal_name=fn_args.get("meal_name", ""))
-                        else:
-                            tool_res = fn(**fn_args)
-                    except Exception as e:
-                        tool_res = f"Error executing {fn_name}: {e}"
-                else:
-                    tool_res = f"Tool {fn_name} not found"
+                try:
+                    if fn_name == "log_food_items":
+                        tool_res = log_food_items(user_id=user_id, items=fn_args.get("items", []))
+                    elif fn_name == "get_today_nutrition_summary":
+                        tool_res = get_today_nutrition_summary(user_id=user_id)
+                    elif fn_name == "delete_last_food_entry":
+                        tool_res = delete_last_food_entry(user_id=user_id)
+                    elif fn_name == "delete_food_entry_by_name":
+                        tool_res = delete_food_entry_by_name(user_id=user_id, meal_name=fn_args.get("meal_name", ""))
+                    elif fn_name == "edit_food_entry":
+                        tool_res = edit_food_entry(user_id=user_id, meal_name=fn_args.get("meal_name", ""), new_values=fn_args.get("new_values", {}))
+                    elif fn_name == "get_user_targets":
+                        tg_id = int(fn_args.get("telegram_id", 0)) or telegram_id
+                        tool_res = get_user_targets(user_id=user_id, telegram_id=tg_id)
+                    else:
+                        tool_res = f"Tool {fn_name} not found."
+                except Exception as e:
+                    tool_res = f"Error executing {fn_name}: {e}"
 
                 # Append model tool_call & user functionResponse
                 contents.append({"role": "model", "parts": [fn_call]})
@@ -274,10 +290,11 @@ async def _run_gemini_with_fallback(
     3. OpenRouter / OpenAI (Tertiary Fallback)
     """
     user_id = _extract_user_id(user_context)
+    telegram_id = _extract_telegram_id(user_context)
 
     # 1. Coba Gemini 3.6-flash
     try:
-        res = await _execute_gemini_turns(contents=contents, user_id=user_id, model="gemini-3.6-flash")
+        res = await _execute_gemini_turns(contents=contents, user_id=user_id, telegram_id=telegram_id, model="gemini-3.6-flash")
         if res:
             return res
     except Exception as e1:
@@ -285,7 +302,7 @@ async def _run_gemini_with_fallback(
 
     # 2. Coba Gemini 2.5-flash
     try:
-        res = await _execute_gemini_turns(contents=contents, user_id=user_id, model="gemini-2.5-flash")
+        res = await _execute_gemini_turns(contents=contents, user_id=user_id, telegram_id=telegram_id, model="gemini-2.5-flash")
         if res:
             return res
     except Exception as e2:
@@ -324,6 +341,7 @@ async def _run_gemini_with_fallback(
         return await execute_fallback_chat(
             system_prompt=SYSTEM_PROMPT,
             messages=messages,
+            user_context=user_context,
             timeout=AI_TIMEOUT_SECONDS,
         )
 

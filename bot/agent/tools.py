@@ -108,7 +108,7 @@ def edit_food_entry(user_id: str, meal_name: str, new_values: dict) -> str:
     return f"Entry '{target['meal_name']}' berhasil diupdate: {changes}."
 
 
-def get_user_targets(user_id: str, telegram_id: int) -> dict:
+def get_user_targets(user_id: str = "", telegram_id: int = 0) -> dict:
     """
     Mengambil target kalori dan protein harian pengguna.
 
@@ -119,7 +119,11 @@ def get_user_targets(user_id: str, telegram_id: int) -> dict:
     Returns:
         Dict berisi target_calories dan target_protein pengguna.
     """
-    user = db.get_user_by_telegram_id(telegram_id)
+    user = None
+    if telegram_id:
+        user = db.get_user_by_telegram_id(telegram_id)
+    if not user and user_id:
+        user = db.get_user_by_id(user_id)
     if not user:
         return {"target_calories": 2000, "target_protein": 150}
     return {

@@ -1,0 +1,17 @@
+{
+  "venvPath": "c:\\Users\\daffa\\OneDrive\\Documents\\CountYourCalories",
+  "venv": "venv",
+  "extraPaths": [
+    ".",
+    "bot"
+  ],
+  "typeCheckingMode": "off",
+  "reportOptionalMemberAccess": "none",
+  "reportOptionalSubscript": "none",
+  "reportOptionalCall": "none",
+  "reportOptionalIterable": "none",
+  "reportOptionalContextManager": "none",
+  "reportOptionalOperand": "none",
+  "reportGeneralTypeIssues": "none",
+  "reportUnknownMemberType": "none"
+}

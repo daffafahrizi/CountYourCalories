@@ -160,14 +160,39 @@ def _get_fallback_config() -> tuple[str, str, str]:
     )
 
 
+def _extract_user_id(user_context: str) -> str:
+    """Mengambil UUID user_id dari string context."""
+    for part in user_context.split(","):
+        part = part.strip()
+        if part.startswith("user_id="):
+            return part.split("user_id=")[1].strip()
+    return ""
+
+
+def _extract_telegram_id(user_context: str) -> int:
+    """Mengambil integer telegram_id dari string context."""
+    for part in user_context.split(","):
+        part = part.strip()
+        if part.startswith("telegram_id="):
+            try:
+                return int(part.split("telegram_id=")[1].strip())
+            except ValueError:
+                return 0
+    return 0
+
+
 async def execute_fallback_chat(
     system_prompt: str,
     messages: list[dict[str, Any]],
+    user_context: str = "",
     timeout: float = 60.0,
 ) -> str:
     """
     Menjalankan chat completions dengan tool calling melalui provider fallback (OpenRouter/OpenAI).
     """
+    user_id = _extract_user_id(user_context)
+    telegram_id = _extract_telegram_id(user_context)
+
     api_key, base_url, model = _get_fallback_config()
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -215,14 +240,24 @@ async def execute_fallback_chat(
                 except Exception:
                     fn_args = {}
 
-                fn = TOOL_MAPPING.get(fn_name)
-                if fn:
-                    try:
-                        tool_result = fn(**fn_args)
-                    except Exception as e:
-                        tool_result = f"Error executing tool {fn_name}: {e}"
-                else:
-                    tool_result = f"Tool {fn_name} not found."
+                try:
+                    if fn_name == "log_food_items":
+                        tool_result = log_food_items(user_id=user_id, items=fn_args.get("items", []))
+                    elif fn_name == "get_today_nutrition_summary":
+                        tool_result = get_today_nutrition_summary(user_id=user_id)
+                    elif fn_name == "delete_last_food_entry":
+                        tool_result = delete_last_food_entry(user_id=user_id)
+                    elif fn_name == "delete_food_entry_by_name":
+                        tool_result = delete_food_entry_by_name(user_id=user_id, meal_name=fn_args.get("meal_name", ""))
+                    elif fn_name == "edit_food_entry":
+                        tool_result = edit_food_entry(user_id=user_id, meal_name=fn_args.get("meal_name", ""), new_values=fn_args.get("new_values", {}))
+                    elif fn_name == "get_user_targets":
+                        tg_id = int(fn_args.get("telegram_id", 0)) or telegram_id
+                        tool_result = get_user_targets(user_id=user_id, telegram_id=tg_id)
+                    else:
+                        tool_result = f"Tool {fn_name} not found."
+                except Exception as e:
+                    tool_result = f"Error executing tool {fn_name}: {e}"
 
                 formatted_messages.append({
                     "role": "tool",

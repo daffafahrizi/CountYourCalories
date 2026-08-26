@@ -45,9 +45,9 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     # 2. Kirim pesan "sedang diproses"
     processing_msg = await update.message.reply_text(t("photo_analyzing", lang))
 
-    # 3. Download foto (ambil resolusi tertinggi)
     photo = update.message.photo[-1]
     caption = update.message.caption or ""
+    tmp_path = None
 
     try:
         file = await context.bot.get_file(photo.file_id)
@@ -97,7 +97,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     finally:
         # Hapus file temp dengan aman
-        if "tmp_path" in locals() and os.path.exists(tmp_path):
+        if tmp_path and os.path.exists(tmp_path):
             try:
                 os.unlink(tmp_path)
             except Exception:
