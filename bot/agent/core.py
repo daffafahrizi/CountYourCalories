@@ -22,30 +22,35 @@ from bot.agent.tools import (
 AGENT_TIMEOUT_SECONDS = 90
 
 SYSTEM_PROMPT = """
-Kamu adalah CountYourCalories, asisten nutrisi cerdas berbasis Telegram.
-Tugasmu adalah membantu pengguna mencatat dan memantau asupan kalori serta makronutrisi harian mereka.
+You are CountYourCalories, a smart nutrition assistant bot on Telegram.
+Your mission is to help users effortlessly log and track their daily calories and macronutrients.
 
-## Kemampuanmu:
-1. **Analisis foto makanan**: Ketika pengguna mengirim foto, identifikasi SEMUA komponen makanan 
-   yang terlihat (misal: nasi, ayam, sayur, dll.) dan estimasikan nilai nutrisinya masing-masing.
-2. **Input teks manual**: Jika pengguna mendeskripsikan makanan via teks, estimasikan nutrisinya.
-3. **Simpan ke database**: Setelah menganalisis, SELALU simpan hasilnya menggunakan tool `log_food_items`.
-4. **Koreksi dan penyesuaian**: Bantu pengguna menghapus atau mengedit entry yang salah.
-5. **Ringkasan harian**: Tampilkan progres nutrisi hari ini vs target.
+## Core Capabilities:
+1. **Photo Analysis**: When a user sends a food photo, identify ALL visible food components (e.g. rice, chicken, vegetables, sauce, etc.) and estimate their individual nutritional values.
+2. **Manual Text Logging**: When a user describes food via text, estimate the nutritional values.
+3. **Database Logging**: After analyzing, ALWAYS save the items using the `log_food_items` tool.
+4. **Corrections & Adjustments**: Help users undo, edit, or delete inaccurate entries.
+5. **Daily Summaries**: Show current progress vs daily goals.
 
-## Aturan penting:
-- Selalu gunakan Bahasa Indonesia yang ramah dan natural.
-- Untuk foto, identifikasi SEMUA makanan yang terlihat, bukan hanya yang dominan.
-- Setelah menyimpan data, SELALU tampilkan ringkasan: apa yang baru disimpan + sisa target hari ini.
-- Estimasi nutrisi berdasarkan porsi visual. Jika tidak yakin, beri range dan pilih nilai tengah.
-- Jangan terlalu panjang dalam membalas — to the point tapi informatif.
-- Format angka: kalori tanpa desimal, protein/karbo/lemak dengan 1 desimal.
+## Language Rules (CRITICAL):
+- Check `[Konteks pengguna]` / `[User Context]` for the user's language: `bahasa=id` (Indonesian) or `language=en` (English).
+- If `bahasa=id`: ALWAYS reply in warm, natural Indonesian.
+- If `language=en`: ALWAYS reply in warm, natural English.
+- If not specified, match the user's input language.
 
-## Format balasan setelah logging:
+## Estimation Rules:
+- Identify ALL visible foods, not just the primary dish.
+- After saving to the database, ALWAYS show a friendly summary of what was logged + remaining daily targets.
+- Format: calories as whole numbers, protein/carbs/fat with 1 decimal place.
+- Keep responses concise, clean, and nicely formatted.
+
+## Response Format Examples:
+
+### When language is Indonesian (`id`):
 ```
 ✅ Berhasil dicatat!
 
-[Emoji makanan] [Nama Makanan] — [kalori] kkal
+[Emoji] [Nama Makanan] — [kalori] kkal
   Protein: [x]g | Karbo: [x]g | Lemak: [x]g
 
 📊 Progress hari ini:
@@ -53,22 +58,16 @@ Tugasmu adalah membantu pengguna mencatat dan memantau asupan kalori serta makro
 💪 Protein: [total]/[target]g ([sisa]g sisa)
 ```
 
-## Format untuk /summary:
+### When language is English (`en`):
 ```
-📊 Ringkasan hari ini, [nama]!
+✅ Logged successfully!
 
-🍽️ Yang sudah dimakan:
-• [Makanan 1] — [x] kkal
-• [Makanan 2] — [x] kkal
-...
+[Emoji] [Food Name] — [calories] kcal
+  Protein: [x]g | Carbs: [x]g | Fat: [x]g
 
-📈 Total:
-🔥 Kalori: [total]/[target] kkal
-💪 Protein: [total]/[target]g
-🍚 Karbo: [total]g
-🥑 Lemak: [total]g
-
-[Pesan motivasi berdasarkan progress]
+📊 Today's Progress:
+🔥 Calories: [total]/[target] kcal ([remaining] left)
+💪 Protein: [total]/[target]g ([remaining]g left)
 ```
 """.strip()
 
@@ -109,32 +108,45 @@ async def process_photo_message(
     image_path: str,
     user_context: str,
     caption: str = "",
+    language: str = "id",
 ) -> str:
     """
     Memproses foto makanan menggunakan Antigravity agent + Gemini multimodal.
 
     Args:
         image_path: Path lokal ke file gambar yang sudah didownload.
-        user_context: String berisi konteks user (id, nama, target).
+        user_context: String berisi konteks user (id, nama, target, bahasa).
         caption: Caption foto dari Telegram (jika ada).
+        language: Bahasa preferensi ('id' atau 'en').
 
     Returns:
         Respons teks dari agent.
-
-    Raises:
-        asyncio.TimeoutError: Jika agent tidak merespons dalam AGENT_TIMEOUT_SECONDS.
     """
     config = create_agent_config()
-    prompt_parts = [
-        f"[Konteks pengguna]: {user_context}\n\n",
-        "Ini adalah foto makanan yang baru saja saya makan. ",
-    ]
-    if caption:
-        prompt_parts.append(f"Keterangan dari saya: {caption}. ")
-    prompt_parts.append(
-        "Tolong analisis semua makanan yang ada di foto ini, estimasikan nutrisinya, "
-        "dan simpan ke database."
-    )
+    is_en = language.startswith("en")
+
+    if is_en:
+        prompt_parts = [
+            f"[User Context]: {user_context}\n\n",
+            "This is a photo of the food I just ate. ",
+        ]
+        if caption:
+            prompt_parts.append(f"My note: {caption}. ")
+        prompt_parts.append(
+            "Please analyze all food items in this photo, estimate their nutritional values, "
+            "and save them to the database using log_food_items."
+        )
+    else:
+        prompt_parts = [
+            f"[Konteks pengguna]: {user_context}\n\n",
+            "Ini adalah foto makanan yang baru saja saya makan. ",
+        ]
+        if caption:
+            prompt_parts.append(f"Keterangan dari saya: {caption}. ")
+        prompt_parts.append(
+            "Tolong analisis semua makanan yang ada di foto ini, estimasikan nutrisinya, "
+            "dan simpan ke database menggunakan log_food_items."
+        )
 
     image = Image.from_file(image_path)
     full_prompt = ["".join(prompt_parts), image]
@@ -150,22 +162,21 @@ async def process_photo_message(
 async def process_text_message(
     user_message: str,
     user_context: str,
+    language: str = "id",
 ) -> str:
     """
     Memproses pesan teks dari user (input manual atau perintah adjustment).
 
     Args:
         user_message: Pesan teks dari pengguna.
-        user_context: String berisi konteks user (id, nama, target).
+        user_context: String berisi konteks user (id, nama, target, bahasa).
+        language: Bahasa preferensi ('id' atau 'en').
 
     Returns:
         Respons teks dari agent.
-
-    Raises:
-        asyncio.TimeoutError: Jika agent tidak merespons dalam AGENT_TIMEOUT_SECONDS.
     """
     config = create_agent_config()
-    full_prompt = f"[Konteks pengguna]: {user_context}\n\n{user_message}"
+    full_prompt = f"[Konteks pengguna / User Context]: {user_context}\n\n{user_message}"
 
     async def _run():
         async with Agent(config) as agent:

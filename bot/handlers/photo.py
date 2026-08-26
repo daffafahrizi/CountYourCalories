@@ -1,9 +1,10 @@
 """
 bot/handlers/photo.py
 
-Handler untuk pesan foto makanan dari pengguna.
+Handler untuk pesan foto makanan dari pengguna (Bilingual).
 """
 
+import asyncio
 import os
 import tempfile
 
@@ -12,16 +13,19 @@ from telegram.ext import ContextTypes
 
 from bot.db import supabase as db
 from bot.agent.core import process_photo_message
+from bot.locales import t
 
 
 def _build_user_context(user: dict) -> str:
     """Bangun string konteks user untuk dikirim ke agent."""
+    lang = user.get("language", "id")
     return (
         f"user_id={user['id']}, "
         f"telegram_id={user['telegram_id']}, "
         f"nama={user['name']}, "
         f"target_kalori={user['target_calories']} kkal, "
-        f"target_protein={user['target_protein']}g"
+        f"target_protein={user['target_protein']}g, "
+        f"bahasa={lang}"
     )
 
 
@@ -32,15 +36,14 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     # 1. Verifikasi user terdaftar
     user = db.get_user_by_telegram_id(telegram_id)
     if not user:
-        await update.message.reply_text(
-            "⚠️ Kamu belum terdaftar! Ketik /start untuk setup profil dulu ya."
-        )
+        tg_lang = update.effective_user.language_code or "id"
+        await update.message.reply_text(t("not_registered", tg_lang))
         return
 
+    lang = user.get("language", "id")
+
     # 2. Kirim pesan "sedang diproses"
-    processing_msg = await update.message.reply_text(
-        "🔍 Menganalisis foto makananmu... Tunggu sebentar ya!",
-    )
+    processing_msg = await update.message.reply_text(t("photo_analyzing", lang))
 
     # 3. Download foto (ambil resolusi tertinggi)
     photo = update.message.photo[-1]
@@ -61,6 +64,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             image_path=tmp_path,
             user_context=user_context,
             caption=caption,
+            language=lang,
         )
 
         # 5. Kirim hasil (dengan fallback jika format Markdown gagal diparse Telegram)
@@ -76,26 +80,20 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             pass
 
     except asyncio.TimeoutError:
+        timeout_msg = t("photo_timeout", lang)
         try:
-            await processing_msg.edit_text(
-                "⏱️ Maaf, proses analisis foto terlalu lama. Silakan coba kirim ulang ya!"
-            )
+            await processing_msg.edit_text(timeout_msg)
         except Exception:
-            await update.message.reply_text(
-                "⏱️ Maaf, proses analisis foto timeout. Coba kirim ulang ya!"
-            )
+            await update.message.reply_text(timeout_msg)
         print("[TIMEOUT] handle_photo: agent timeout")
 
     except Exception as e:
         print(f"[ERROR] handle_photo: {e}")
+        err_msg = t("photo_error", lang, error=str(e)[:100])
         try:
-            await processing_msg.edit_text(
-                f"❌ Maaf, terjadi kesalahan saat memproses fotomu: {e}"
-            )
+            await processing_msg.edit_text(err_msg)
         except Exception:
-            await update.message.reply_text(
-                f"❌ Maaf, terjadi kesalahan saat memproses fotomu: {e}"
-            )
+            await update.message.reply_text(err_msg)
 
     finally:
         # Hapus file temp dengan aman

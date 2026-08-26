@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   target_protein   INT NOT NULL DEFAULT 150,
   target_carbs     INT,
   target_fat       INT,
+  language         TEXT NOT NULL DEFAULT 'id',
   created_at       TIMESTAMPTZ DEFAULT now()
 );
 

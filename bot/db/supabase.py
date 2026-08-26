@@ -53,24 +53,47 @@ def create_user(
     target_protein: int,
     target_carbs: Optional[int] = None,
     target_fat: Optional[int] = None,
+    language: str = "id",
 ) -> dict:
-    """Buat user baru di tabel users."""
+    """Buat user baru di tabel users (dengan graceful fallback jika kolom language belum di-migrasi)."""
     client = get_client()
-    result = (
-        client.table("users")
-        .insert({
-            "telegram_id": telegram_id,
-            "name": name,
-            "weight_kg": weight_kg,
-            "height_cm": height_cm,
-            "target_calories": target_calories,
-            "target_protein": target_protein,
-            "target_carbs": target_carbs,
-            "target_fat": target_fat,
-        })
-        .execute()
-    )
-    return result.data[0]
+    data = {
+        "telegram_id": telegram_id,
+        "name": name,
+        "weight_kg": weight_kg,
+        "height_cm": height_cm,
+        "target_calories": target_calories,
+        "target_protein": target_protein,
+        "target_carbs": target_carbs,
+        "target_fat": target_fat,
+        "language": language,
+    }
+    try:
+        result = client.table("users").insert(data).execute()
+        return result.data[0]
+    except Exception as e:
+        # Jika kolom language belum ada di Supabase, simpan tanpa kolom language
+        if "language" in str(e):
+            data.pop("language", None)
+            result = client.table("users").insert(data).execute()
+            return result.data[0]
+        raise e
+
+
+def update_user_language(telegram_id: int, language: str) -> dict:
+    """Update preferensi bahasa pengguna ('id' atau 'en')."""
+    client = get_client()
+    try:
+        result = (
+            client.table("users")
+            .update({"language": language})
+            .eq("telegram_id", telegram_id)
+            .execute()
+        )
+        return result.data[0] if result.data else {}
+    except Exception as e:
+        print(f"[WARN] update_user_language: {e}. Pastikan kolom 'language' sudah dibuat di tabel 'users'.")
+        return {}
 
 
 def update_user_targets(
